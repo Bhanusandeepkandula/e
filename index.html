@@ -8,20 +8,25 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
   <style>
     body { font-family: 'Inter', sans-serif; }
-    input, select { border:1px solid #CBD5E1!important; }
-    input:focus, select:focus { border-color:#4F46E5!important; box-shadow:none!important; }
-    #loginModal, #modal { background:rgba(0,0,0,0.85)!important; }
-    #loginModal>div, #modal>div { border:1px solid #E5E7EB; }
-    #eventsTable td, #eventsTable th { padding:1.35rem; }
-    @media(max-width:640px){header{flex-direction:column;align-items:flex-start}header .space-x-2{margin-top:.5rem}#stats{grid-template-columns:repeat(1,minmax(0,1fr))}#eventsTable thead{display:none}#eventsTable tr{display:block;margin-bottom:1rem;border:1px solid #E5E7EB;border-radius:.8rem;padding:.75rem}#eventsTable td{display:flex;justify-content:space-between;padding:.5rem 0}#eventsTable td::before{content:attr(data-label);font-weight:600;width:40%}#loginModal>div,#modal>div{width:90%;max-width:none}#eventForm{grid-template-columns:1fr!important}#eventForm .col-span-2{grid-column:span 1!important}}  
-  input, select {
-  border: 1px solid #CBD5E1 !important;
-  /* bump the default 3 rem height up by 18%: */
-  height: calc(3rem * 1.005) !important;
-}
+    input, select { border: 1px solid #CBD5E1 !important; height: calc(3rem * 1.005) !important; }
+    input:focus, select:focus { border-color: #4F46E5 !important; box-shadow: none !important; }
+    #loginModal, #modal { background: rgba(0,0,0,0.85) !important; }
+    #loginModal > div, #modal > div { border: 1px solid #E5E7EB; }
+    #eventsTable td, #eventsTable th { padding: 1.35rem; }
+    @media (max-width: 640px) {
+      header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+      #stats { grid-template-columns: 1fr !important; gap: 0.75rem; }
+      #filters { display: none; }
+      #filterSelect { display: block; margin-bottom: 1rem; }
+      #eventsTable { display: none; }
+      #eventCards { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+      .event-card { background: white; border: 1px solid #E5E7EB; border-radius: 0.75rem; padding: 0.75rem; }
+      .event-card div { margin-bottom: 0.5rem; }
+    }
   </style>
 </head>
 <body class="bg-gray-50 p-6">
+  <!-- Login Modal -->
   <div id="loginModal" class="fixed inset-0 flex items-center justify-center hidden">
     <div class="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg">
       <h2 class="text-xl font-semibold mb-4">Enter PIN</h2>
@@ -29,7 +34,7 @@
       <button id="loginBtn" class="mt-4 w-full bg-indigo-600 text-white px-4 py-2 rounded">Login</button>
     </div>
   </div>
-
+  <!-- Header -->
   <header class="flex justify-between items-center mb-6">
     <div>
       <h1 class="text-3xl font-extrabold">Event Planner</h1>
@@ -40,22 +45,29 @@
       <button id="addEventBtn" class="bg-indigo-600 text-white px-4 py-2 rounded shadow">+ Add Event</button>
     </div>
   </header>
-
+  <!-- Stats Cards -->
   <section id="stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4 mb-6"></section>
-
-  <div class="flex justify-between items-center mb-4">
-    <h2 class="text-2xl font-semibold">Events</h2>
-    <div id="filters" class="flex space-x-3"></div>
+  <!-- Filters & Search -->
+  <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex items-center space-x-4 mb-2 sm:mb-0">
+      <h2 class="text-2xl font-semibold">Events</h2>
+      <input id="searchInput" type="text" placeholder="Search by" class="px-3 py-2 border rounded shadow-sm" />
+    </div>
+    <div class="flex items-center space-x-3">
+      <div id="filters" class="flex space-x-2"></div>
+      <select id="filterSelect" class="w-full p-3 rounded bg-white shadow hidden"></select>
+    </div>
   </div>
-  <div class="overflow-x-auto bg-white rounded shadow">
+  <!-- Table -->
+  <div class="overflow-x-auto bg-white rounded shadow mb-6">
     <table id="eventsTable" class="min-w-full divide-y divide-gray-200">
       <thead class="bg-gray-100">
-        <tr><th>Event</th><th>Customer</th><th>Address</th><th>Date</th><th>Status</th><th>Total</th><th>Paid</th><th>Balance</th><th>Actions</th></tr>
+        <tr><th>Event</th><th>Customer</th><th>Phone</th><th>Date</th><th>Status</th><th>Total</th><th>Paid</th><th>Balance</th><th>Actions</th></tr>
       </thead>
       <tbody id="eventsBody" class="bg-white divide-y divide-gray-200"></tbody>
     </table>
   </div>
-
+  <!-- Modal -->
   <div id="modal" class="fixed inset-0 flex items-center justify-center hidden">
     <div class="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
       <div class="flex justify-between items-center mb-4">
@@ -66,57 +78,156 @@
       <form id="eventForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
         <input type="hidden" name="id" />
         <div class="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div><label>Event Name</label><input name="eventName" placeholder="Enter event name" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/></div>
-          <div><label>Customer</label><input name="customerName" placeholder="Enter customer name" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/></div>
+          <div>
+            <label class="block text-sm font-medium">Event Name</label>
+            <input name="eventName" placeholder="Enter event name" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Customer</label>
+            <input name="customerName" placeholder="Enter customer name" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+          </div>
         </div>
-        <div><label>Phone</label><input name="phone" type="tel" placeholder="Enter phone number" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/></div>
-        <div><label>Address</label><input name="address" placeholder="Enter address" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/></div>
-        <div><label>Venue</label><input name="venue" placeholder="Enter venue" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/></div>
-        <div><label>Status</label><select name="status" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"><option>Scheduled</option><option>Ongoing</option><option>Completed</option><option>Cancelled</option></select></div>
-        <div><label>Date & Time</label><input name="dateTime" type="datetime-local" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/></div>
-        <div><label>Total Cost ($)</label><input name="totalCost" type="number" step="0.01" placeholder="0.00" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/></div>
-        <div><label>Amount Paid ($)</label><input name="paid" type="number" step="0.01" placeholder="0.00" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/></div>
+        <div>
+          <label class="block text-sm font-medium">Phone</label>
+          <input name="phone" type="tel" placeholder="Enter phone number" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Address</label>
+          <input name="address" placeholder="Enter address" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Venue</label>
+          <input name="venue" placeholder="Enter venue" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Status</label>
+          <select name="status" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3">
+            <option>Scheduled</option>
+            <option>Ongoing</option>
+            <option>Completed</option>
+            <option>Cancelled</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Date & Time</label>
+          <input name="dateTime" type="datetime-local" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Total Cost ($)</label>
+          <input name="totalCost" type="number" step="0.01" placeholder="0.00" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Amount Paid ($)</label>
+          <input name="paid" type="number" step="0.01" placeholder="0.00" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+        </div>
       </form>
       <div id="modalActions" class="flex justify-end space-x-3 mt-4 hidden">
         <button id="cancelBtn" class="px-4 py-2 border rounded-md text-gray-700">Reset</button>
-        <button id="saveBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-md">Save</button>
+        <button id="saveBtn" type="button" class="px-4 py-2 bg-indigo-600 text-white rounded-md">Save</button>
       </div>
     </div>
   </div>
-
   <script>
-    const loginModal = document.getElementById('loginModal'), modal = document.getElementById('modal');
-    const loginBtn = document.getElementById('loginBtn'), logoutBtn = document.getElementById('logoutBtn');
-    const addEventBtn = document.getElementById('addEventBtn'), closeModalBtn = document.getElementById('closeModalBtn');
-    const cancelBtn = document.getElementById('cancelBtn'), saveBtn = document.getElementById('saveBtn');
-    const stats = document.getElementById('stats'), filters = document.getElementById('filters'), tableBody = document.getElementById('eventsBody');
-    const form = document.getElementById('eventForm');
-    let events = JSON.parse(localStorage.getItem('events')||'[]'), activeFilter='All', loggedIn=localStorage.getItem('loggedIn')==='true';
-    const icons={Scheduled:'📅',Ongoing:'⏱️',Completed:'✅',Cancelled:'❌',Total:'📦',Earned:'💲',Balance:'💰'};
-    const statusClasses={Scheduled:'bg-blue-50 text-blue-800',Ongoing:'bg-amber-50 text-amber-800',Completed:'bg-green-50 text-green-800',Cancelled:'bg-red-50 text-red-800'};
-    function showLogin(){loginModal.classList.remove('hidden');} function hideLogin(){loginModal.classList.add('hidden');}
-    loginBtn.onclick=()=>{if(document.getElementById('pinInput').value==='0000'){loggedIn=true;localStorage.setItem('loggedIn','true');hideLogin();refresh();}else alert('Invalid PIN');};
-    logoutBtn.onclick=()=>{loggedIn=false;localStorage.setItem('loggedIn','false');showLogin();};
-    function saveAll(){localStorage.setItem('events',JSON.stringify(events));}
-    function autoUpdate(){const now=Date.now();events=events.map(e=>({...e,status:e.status==='Scheduled'&&new Date(e.dateTime)<=now?'Ongoing':e.status}));}
-    function renderStats(){const counts={Scheduled:0,Ongoing:0,Completed:0,Cancelled:0}, sums={earned:0,balance:0};events.forEach(e=>{counts[e.status]++;sums.earned+=+e.paid;sums.balance+=(+e.totalCost - +e.paid)});
-      const data=[{label:'All Events',value:events.length,icon:icons.Total,filter:'All'},
-                  ...['Scheduled','Ongoing','Completed','Cancelled'].map(s=>({label:s,value:counts[s],icon:icons[s],filter:s})),
-                  {label:'Total Earned',value:`$${sums.earned.toFixed(2)}`,icon:icons.Earned,filter:'Earned'},
-                  {label:'Balance',value:`$${sums.balance.toFixed(2)}`,icon:icons.Balance,filter:'Balance'}];
-      stats.innerHTML=''; data.forEach(item=>{const c=document.createElement('div');c.className='p-4 rounded shadow text-center cursor-pointer';c.innerHTML=`<div class="text-2xl mb-1">${item.icon}</div><div class="text-sm text-gray-500">${item.label}</div><div class="text-xl font-semibold">${item.value}</div>`;c.onclick=()=>{activeFilter=item.filter;renderStats();renderTable();};stats.append(c);});}
-    function renderFilters(){filters.innerHTML='';['All','Scheduled','Ongoing','Completed','Cancelled','Earned','Balance'].forEach(s=>{const p=document.createElement('div');p.textContent=s;p.className=`px-3 py-1 border rounded cursor-pointer ${s===activeFilter?'bg-indigo-600 text-white':'border-gray-300 text-gray-700'}`;p.onclick=()=>{activeFilter=s;renderFilters();renderTable();};filters.append(p);});}
-    function renderTable(){tableBody.innerHTML='';let list=[];if(activeFilter==='All')list=events;else if(activeFilter==='Earned')list=events.filter(e=>+e.paid>0);else if(activeFilter==='Balance')list=events.filter(e=>(+e.totalCost - +e.paid)>0);else list=events.filter(e=>e.status===activeFilter);
-      if(!list.length){tableBody.innerHTML='<tr><td colspan="9" class="text-center py-6">No events</td></tr>';return;}list.forEach(e=>{const tr=document.createElement('tr');tr.className='hover:bg-gray-50';tr.innerHTML=`<td class="px-4 py-2" data-label="Event">${e.eventName}</td><td class="px-4 py-2" data-label="Customer">${e.customerName}</td><td class="px-4 py-2" data-label="Address">${e.address}</td><td class="px-4 py-2" data-label="Date">${new Date(e.dateTime).toLocaleString()}</td><td class="px-4 py-2" data-label="Status"><span class="px-2 py-1 rounded ${statusClasses[e.status]}">${e.status}</span></td><td class="px-4 py-2" data-label="Total">$${(+e.totalCost).toFixed(2)}</td><td class="px-4 py-2" data-label="Paid">$${(+e.paid).toFixed(2)}</td><td class="px-4 py-2" data-label="Balance">$${((+e.totalCost-e.paid)).toFixed(2)}</td><td class="px-4 py-2 space-x-2" data-label="Actions"><button onclick="viewDetails(${e.id})" title="Details">ℹ️</button><button onclick="openEditor(${e.id})" title="Edit">✏️</button><button onclick="deleteEvent(${e.id})" title="Delete">🗑️</button></td>`;tableBody.append(tr);});}
-    function refresh(){if(!loggedIn){showLogin();return;}autoUpdate();renderStats();renderFilters();renderTable();saveAll();}
-    window.viewDetails=id=>{const view=document.getElementById('detailsView'),form=document.getElementById('eventForm'),actions=document.getElementById('modalActions');view.innerHTML='';const e=events.find(ev=>ev.id===id);[{label:'Event',key:'eventName'},{label:'Customer',key:'customerName'},{label:'Phone',key:'phone'},{label:'Address',key:'address'},{label:'Venue',key:'venue'},{label:'Status',key:'status'},{label:'Date',key:'dateTime',format:val=>new Date(val).toLocaleString()},{label:'Total Cost',key:'totalCost',format:val=>`$${parseFloat(val).toFixed(2)}`},{label:'Paid',key:'paid',format:val=>`$${parseFloat(val).toFixed(2)}`},{label:'Balance',key:'balance',format:val=>`$${parseFloat(val).toFixed(2)}`}].forEach(f=>{const p=document.createElement('p'),value=f.format?f.format(e[f.key]):e[f.key];p.innerHTML=`<strong>${f.label}:</strong> <span>${value}</span>`;view.appendChild(p)});document.getElementById('modalTitle').textContent='Event Details';form.classList.add('hidden');view.classList.remove('hidden');actions.classList.add('hidden');modal.classList.remove('hidden');};
-    window.openEditor=id=>{const view=document.getElementById('detailsView'),form=document.getElementById('eventForm'),actions=document.getElementById('modalActions');form.reset();view.classList.add('hidden');form.classList.remove('hidden');actions.classList.remove('hidden');if(id){document.getElementById('modalTitle').textContent='Edit Event';const e=events.find(ev=>ev.id===id);['id','eventName','customerName','phone','address','venue','status','dateTime','totalCost','paid'].forEach(k=>form.elements[k].value=e[k]);}else document.getElementById('modalTitle').textContent='New Event';modal.classList.remove('hidden');};
-    window.deleteEvent=id=>{events=events.filter(ev=>ev.id!==id);refresh();};
-    addEventBtn.onclick=()=>openEditor(null);
-    closeModalBtn.onclick=()=>modal.classList.add('hidden');
-    cancelBtn.onclick=()=>form.reset();
-    saveBtn.onclick=()=>{const data=Object.fromEntries(new FormData(form));data.id=data.id?Number(data.id):Date.now();data.totalCost=parseFloat(data.totalCost)||0;data.paid=parseFloat(data.paid)||0;data.balance=data.totalCost-data.paid;const idx=events.findIndex(ev=>ev.id===data.id);if(idx>-1)events[idx]=data;else events.unshift(data);modal.classList.add('hidden');refresh();};
-    document.body.onload=refresh;
+    document.addEventListener('DOMContentLoaded', () => {
+      let events = JSON.parse(localStorage.getItem('events') || '[]');
+      let activeFilter = 'All';
+      let loggedIn = false;
+      const isMobile = window.matchMedia('(max-width:640px)').matches;
+      const stats = document.getElementById('stats');
+      const filtersDiv = document.getElementById('filters');
+      const filterSelect = document.getElementById('filterSelect');
+      const searchInput = document.getElementById('searchInput');
+      const tableBody = document.getElementById('eventsBody');
+      const loginModal = document.getElementById('loginModal');
+      const pinInput = document.getElementById('pinInput');
+      const loginBtn = document.getElementById('loginBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+      const addEventBtn = document.getElementById('addEventBtn');
+      const modal = document.getElementById('modal');
+      const modalTitle = document.getElementById('modalTitle');
+      const closeModalBtn = document.getElementById('closeModalBtn');
+      const detailsView = document.getElementById('detailsView');
+      const eventForm = document.getElementById('eventForm');
+      const cancelBtn = document.getElementById('cancelBtn');
+      const saveBtn = document.getElementById('saveBtn');
+      // Attach save handler
+      saveBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        // Validate form visibility
+        if (eventForm.classList.contains('hidden')) return;
+        // Gather form data
+        const data = Object.fromEntries(new FormData(eventForm));
+        data.id = data.id ? Number(data.id) : Date.now();
+        data.totalCost = parseFloat(data.totalCost) || 0;
+        data.paid = parseFloat(data.paid) || 0;
+        data.balance = data.totalCost - data.paid;
+        const idx = events.findIndex(ev => ev.id === data.id);
+        if (idx > -1) events[idx] = data;
+        else events.unshift(data);
+        saveEvents();
+        hideModal();
+        render();
+      });('click', function(e) {
+        e.preventDefault();
+        console.log('Save clicked');
+        // Collect form data
+        const data = Object.fromEntries(new FormData(eventForm));
+        console.log('Form Data:', data);
+        data.id = data.id ? Number(data.id) : Date.now();
+        data.totalCost = parseFloat(data.totalCost) || 0;
+        data.paid = parseFloat(data.paid) || 0;
+        data.balance = data.totalCost - data.paid;
+        const idx = events.findIndex(ev => ev.id === data.id);
+        if (idx > -1) events[idx] = data;
+        else events.unshift(data);
+        saveEvents();
+        hideModal();
+        render();
+      });
+
+      const filterOptions = ['All','Scheduled','Ongoing','Completed','Cancelled','Earned','Balance'];
+      const icons = {Scheduled:'📅',Ongoing:'⏱️',Completed:'✅',Cancelled:'❌',Total:'📦',Earned:'💲',Balance:'💰'};
+      const statusClasses = {Scheduled:'bg-blue-50 text-blue-800',Ongoing:'bg-amber-50 text-amber-800',Completed:'bg-green-50 text-green-800',Cancelled:'bg-red-50 text-red-800'};
+
+      function saveEvents(){localStorage.setItem('events',JSON.stringify(events));}
+      function showLogin(){loginModal.classList.remove('hidden');}
+      function hideLogin(){loginModal.classList.add('hidden');}
+      function showModal(){modal.classList.remove('hidden');}
+      function hideModal(){modal.classList.add('hidden');}
+
+      loginBtn.addEventListener('click',()=>{
+        if(pinInput.value==='0000'){loggedIn=true;hideLogin();render();}else alert('Invalid PIN');
+      });
+      logoutBtn.addEventListener('click',()=>{loggedIn=false;showLogin();});
+      addEventBtn.addEventListener('click',()=>openEditor(null));
+      // Close modal on clicking 'X'
+      closeModalBtn.addEventListener('click', hideModal);
+
+      filterOptions.forEach(opt=>{
+        const btn=document.createElement('button');btn.textContent=opt;btn.className='px-3 py-1 border rounded';
+        btn.addEventListener('click',()=>{activeFilter=opt;render();});filtersDiv.append(btn);
+        const option=document.createElement('option');option.value=opt;option.text=opt;filterSelect.append(option);
+      });
+      filterSelect.addEventListener('change',e=>{activeFilter=e.target.value;render();});
+      searchInput.addEventListener('input',render);
+
+      window.openEditor=id=>{eventForm.reset();detailsView.classList.add('hidden');eventForm.classList.remove('hidden');modalTitle.textContent=id?'Edit Event':'New Event';
+        if(id){const ev=events.find(e=>e.id===id);for(let k in ev)if(eventForm.elements[k])eventForm.elements[k].value=ev[k];}
+        document.getElementById('modalActions').classList.remove('hidden');showModal();};
+      window.viewDetails=id=>{detailsView.innerHTML='';detailsView.classList.remove('hidden');eventForm.classList.add('hidden');modalTitle.textContent='Event Details';
+        const ev=events.find(e=>e.id===id);['eventName','customerName','phone','address','venue','status','dateTime','totalCost','paid','balance'].forEach(key=>{
+          const p=document.createElement('p');p.innerHTML=`<strong>${key}:</strong> ${key==='dateTime'?new Date(ev[key]).toLocaleString():ev[key]}`;detailsView.append(p);
+        });document.getElementById('modalActions').classList.add('hidden');showModal();};
+      window.deleteEvent=id=>{if(confirm('Delete?')){events=events.filter(e=>e.id!==id);saveEvents();render();}};
+
+      function applyFilters(list){const term=searchInput.value.trim().toLowerCase();return list.filter(e=>{if(activeFilter!=='All'){if(activeFilter==='Earned'&&+e.paid<=0)return false;if(activeFilter==='Balance'&&(+e.totalCost-e.paid)<=0)return false;if(['Scheduled','Ongoing','Completed','Cancelled'].includes(activeFilter)&&e.status!==activeFilter)return false;}if(term)return e.customerName.toLowerCase().includes(term)||e.phone.toLowerCase().includes(term);return true;});}
+
+      function renderStats(){const counts={Scheduled:0,Ongoing:0,Completed:0,Cancelled:0};let earned=0,balance=0;events.forEach(e=>{counts[e.status]++;earned+=+e.paid;balance+=(+e.totalCost-e.paid)});const data=[{label:'All Events',value:events.length,icon:icons.Total,filter:'All'},...['Scheduled','Ongoing','Completed','Cancelled'].map(s=>({label:s,value:counts[s],icon:icons[s],filter:s})),{label:'Total Earned',value:`$${earned.toFixed(2)}`,icon:icons.Earned,filter:'Earned'},{label:'Balance',value:`$${balance.toFixed(2)}`,icon:icons.Balance,filter:'Balance'}];stats.innerHTML='';data.forEach(item=>{const c=document.createElement('div');c.className='p-4 rounded shadow text-center cursor-pointer';c.classList.toggle('bg-indigo-600',item.filter===activeFilter);c.classList.toggle('text-white',item.filter===activeFilter);c.innerHTML=`<div class="text-2xl mb-1">${item.icon}</div><div class="text-sm">${item.label}</div><div class="text-xl font-semibold">${item.value}</div>`;c.addEventListener('click',()=>{activeFilter=item.filter;render();});stats.append(c);});}
+
+      function render(){if(!loggedIn)return;renderStats();filtersDiv.querySelectorAll('button').forEach(btn=>{btn.classList.toggle('bg-indigo-600',btn.textContent===activeFilter);btn.classList.toggle('text-white',btn.textContent===activeFilter);});filterSelect.value=activeFilter;const list=applyFilters(events);tableBody.innerHTML='';list.forEach(e=>{const tr=document.createElement('tr');tr.innerHTML=`<td data-label="Event">${e.eventName}</td><td data-label="Customer">${e.customerName}</td><td data-label="Phone">${e.phone}</td><td data-label="Date">${new Date(e.dateTime).toLocaleString()}</td><td data-label="Status"><span class="px-2 py-1 rounded ${statusClasses[e.status]}">${e.status}</span></td><td data-label="Total">$${(+e.totalCost).toFixed(2)}</td><td data-label="Paid">$${(+e.paid).toFixed(2)}</td><td data-label="Balance">$${((+e.totalCost-e.paid)).toFixed(2)}</td><td data-label="Actions"><button onclick="viewDetails(${e.id})">ℹ️</button><button onclick="openEditor(${e.id})">✏️</button><button onclick="deleteEvent(${e.id})">🗑️</button></td>`;tableBody.append(tr);});}
+
+      showLogin();
+    });
   </script>
 </body>
 </html>
