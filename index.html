@@ -2,86 +2,106 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Event Planner</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet"/>
   <style>
     body { font-family: 'Inter', sans-serif; }
     input, select { border: 1px solid #CBD5E1 !important; height: calc(3rem * 1.005) !important; }
-    input:focus, select:focus { border-color: #4F46E5 !important; box-shadow: none !important; }
-    #loginModal, #modal { background: rgba(0,0,0,0.85) !important; }
-    #loginModal > div, #modal > div { border: 1px solid #E5E7EB; }
-    #eventsTable td, #eventsTable th { padding: 1.35rem; }
+    #eventsTable { table-layout: auto; width: 100%; }
+    #eventsTable th, #eventsTable td {
+      padding: 1rem;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    #eventsTable td:first-child, #eventsTable th:first-child {
+      padding-left: 2rem;
+    }
+    #eventsTable th:nth-child(4), #eventsTable td:nth-child(4) {
+      width: 180px;
+    }
+    #eventsTable th:nth-child(5), #eventsTable td:nth-child(5) {
+      width: 140px;
+      text-align: center;
+    }
+    #filters { display: flex; gap: 0.5rem; }
+    #filters button {
+      padding: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      cursor: pointer;
+    }
+    #filters button.active {
+      background: #4F46E5;
+      color: #fff;
+      border-color: #4F46E5;
+    }
     @media (max-width: 640px) {
-      header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
-      #stats { grid-template-columns: 1fr !important; gap: 0.75rem; }
       #filters { display: none; }
-      #filterSelect { display: block; margin-bottom: 1rem; }
       #eventsTable { display: none; }
       #eventCards { display: grid; grid-template-columns: 1fr; gap: 1rem; }
-      .event-card { background: white; border: 1px solid #E5E7EB; border-radius: 0.75rem; padding: 0.75rem; }
-      .event-card div { margin-bottom: 0.5rem; }
     }
-    /* Compact the search input */
-#searchInput {
-  height: 2.5rem !important;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-}
-
-/* Make its focus state more pronounced */
-#searchInput:focus {
-  border-color: #4F46E5 !important;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3) !important;
-}
-
+    #searchInput {
+      height: 2.5rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+    }
+    #searchInput:focus {
+      border-color: #4F46E5;
+      box-shadow: 0 0 0 2px rgba(79,70,229,0.3);
+    }
   </style>
 </head>
 <body class="bg-gray-50 p-6">
   <!-- Login Modal -->
-  <div id="loginModal" class="fixed inset-0 flex items-center justify-center hidden">
+  <div id="loginModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
     <div class="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg">
       <h2 class="text-xl font-semibold mb-4">Enter PIN</h2>
-      <input id="pinInput" type="password" maxlength="4" placeholder="••••" class="w-full bg-gray-50 rounded-md shadow-sm px-3 text-center text-xl" />
+      <input id="pinInput" type="password" maxlength="4" placeholder="••••" class="w-full bg-gray-50 rounded-md shadow-sm px-3 py-2 text-center text-xl border"/>
       <button id="loginBtn" class="mt-4 w-full bg-indigo-600 text-white px-4 py-2 rounded">Login</button>
     </div>
   </div>
-  <!-- Header -->
+
   <header class="flex justify-between items-center mb-6">
     <div>
       <h1 class="text-3xl font-extrabold">Event Planner</h1>
       <p class="text-gray-500">Organize and keep track of all your events</p>
     </div>
     <div class="space-x-2">
-      <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded shadow">Logout</button>
-      <button id="addEventBtn" class="bg-indigo-600 text-white px-4 py-2 rounded shadow">+ Add Event</button>
+      <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded">Logout</button>
+      <button id="addEventBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">+ Add Event</button>
     </div>
   </header>
-  <!-- Stats Cards -->
+
   <section id="stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4 mb-6"></section>
-  <!-- Filters & Search -->
-  <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-    <div class="flex items-center space-x-4 mb-2 sm:mb-0">
+
+  <div class="mb-4 flex items-center justify-between">
+    <div class="flex items-center space-x-4">
       <h2 class="text-2xl font-semibold">Events</h2>
-      <input id="searchInput" type="text" placeholder="Search by" class="px-3 py-2 border rounded shadow-sm" />
+      <input id="searchInput" type="text" placeholder="Search by customer or phone" class="px-3 py-2 border rounded shadow-sm"/>
     </div>
-    <div class="flex items-center space-x-3">
-      <div id="filters" class="flex space-x-2"></div>
-      <select id="filterSelect" class="w-full p-3 rounded bg-white shadow hidden"></select>
-    </div>
+    <div id="filters"></div>
   </div>
-  <!-- Table -->
+
   <div class="overflow-x-auto bg-white rounded shadow mb-6">
     <table id="eventsTable" class="min-w-full divide-y divide-gray-200">
       <thead class="bg-gray-100">
-        <tr><th>Event</th><th>Customer</th><th>Phone</th><th>Date</th><th>Status</th><th>Total</th><th>Paid</th><th>Balance</th><th>Actions</th></tr>
+        <tr>
+          <th>Event</th><th>Customer</th><th>Phone</th><th>Date</th><th>Status</th><th>Total</th><th>Paid</th><th>Balance</th><th>Actions</th>
+        </tr>
       </thead>
       <tbody id="eventsBody" class="bg-white divide-y divide-gray-200"></tbody>
     </table>
   </div>
+
   <!-- Modal -->
-  <div id="modal" class="fixed inset-0 flex items-center justify-center hidden">
+  <div id="modal" class="fixed inset-0 flex hidden items-center justify-center bg-black bg-opacity-50">
     <div class="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
       <div class="flex justify-between items-center mb-4">
         <h2 id="modalTitle" class="text-xl font-semibold"></h2>
@@ -89,32 +109,30 @@
       </div>
       <div id="detailsView" class="space-y-2"></div>
       <form id="eventForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
-        <input type="hidden" name="id" />
-        <div class="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium">Event Name</label>
-            <input name="eventName" placeholder="Enter event name" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium">Customer</label>
-            <input name="customerName" placeholder="Enter customer name" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
-          </div>
+        <input type="hidden" name="id"/>
+        <div>
+          <label class="block text-sm font-medium">Event Name</label>
+          <input name="eventName" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter event name"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Customer</label>
+          <input name="customerName" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter customer name"/>
         </div>
         <div>
           <label class="block text-sm font-medium">Phone</label>
-          <input name="phone" type="tel" placeholder="Enter phone number" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+          <input name="phone" type="tel" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter phone number"/>
         </div>
         <div>
           <label class="block text-sm font-medium">Address</label>
-          <input name="address" placeholder="Enter address" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+          <input name="address" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter address"/>
         </div>
         <div>
           <label class="block text-sm font-medium">Venue</label>
-          <input name="venue" placeholder="Enter venue" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+          <input name="venue" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter venue"/>
         </div>
         <div>
           <label class="block text-sm font-medium">Status</label>
-          <select name="status" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3">
+          <select name="status" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3">
             <option>Scheduled</option>
             <option>Ongoing</option>
             <option>Completed</option>
@@ -123,123 +141,242 @@
         </div>
         <div>
           <label class="block text-sm font-medium">Date & Time</label>
-          <input name="dateTime" type="datetime-local" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+          <input name="dateTime" type="datetime-local" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/>
         </div>
         <div>
           <label class="block text-sm font-medium">Total Cost ($)</label>
-          <input name="totalCost" type="number" step="0.01" placeholder="0.00" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+          <input name="totalCost" type="number" step="0.01" placeholder="0.00" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/>
         </div>
         <div>
           <label class="block text-sm font-medium">Amount Paid ($)</label>
-          <input name="paid" type="number" step="0.01" placeholder="0.00" class="mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+          <input name="paid" type="number" step="0.01" placeholder="0.00" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/>
         </div>
       </form>
       <div id="modalActions" class="flex justify-end space-x-3 mt-4 hidden">
         <button id="cancelBtn" class="px-4 py-2 border rounded-md text-gray-700">Reset</button>
-        <button id="saveBtn" type="button" class="px-4 py-2 bg-indigo-600 text-white rounded-md">Save</button>
+        <button id="saveBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-md">Save</button>
       </div>
     </div>
   </div>
+
   <script>
+    // Firebase config and init
+    const firebaseConfig = {
+      apiKey: "AIzaSyBZwbmHHqmc9iOhTMGUVM8Hgd1EGC7OJ8Q",
+      authDomain: "events-ed966.firebaseapp.com",
+      databaseURL: "https://events-ed966-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "events-ed966",
+      storageBucket: "events-ed966.appspot.com",
+      messagingSenderId: "26715005266",
+      appId: "1:26715005266:web:fcccdab09d89bf9b7ada8b",
+      measurementId: "G-65Z0JP7Q42"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("events");
+
     document.addEventListener('DOMContentLoaded', () => {
-      let events = JSON.parse(localStorage.getItem('events') || '[]');
+      let events = [];
       let activeFilter = 'All';
       let loggedIn = false;
-      const isMobile = window.matchMedia('(max-width:640px)').matches;
-      const stats = document.getElementById('stats');
-      const filtersDiv = document.getElementById('filters');
-      const filterSelect = document.getElementById('filterSelect');
-      const searchInput = document.getElementById('searchInput');
-      const tableBody = document.getElementById('eventsBody');
+
+      // Elements
       const loginModal = document.getElementById('loginModal');
       const pinInput = document.getElementById('pinInput');
       const loginBtn = document.getElementById('loginBtn');
       const logoutBtn = document.getElementById('logoutBtn');
       const addEventBtn = document.getElementById('addEventBtn');
+      const stats = document.getElementById('stats');
+      const filtersDiv = document.getElementById('filters');
+      const searchInput = document.getElementById('searchInput');
+      const eventsBody = document.getElementById('eventsBody');
       const modal = document.getElementById('modal');
-      const modalTitle = document.getElementById('modalTitle');
       const closeModalBtn = document.getElementById('closeModalBtn');
       const detailsView = document.getElementById('detailsView');
       const eventForm = document.getElementById('eventForm');
-      const cancelBtn = document.getElementById('cancelBtn');
+      const modalActions = document.getElementById('modalActions');
       const saveBtn = document.getElementById('saveBtn');
-      // Attach save handler
-      saveBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        // Validate form visibility
-        if (eventForm.classList.contains('hidden')) return;
-        // Gather form data
-        const data = Object.fromEntries(new FormData(eventForm));
-        data.id = data.id ? Number(data.id) : Date.now();
-        data.totalCost = parseFloat(data.totalCost) || 0;
-        data.paid = parseFloat(data.paid) || 0;
-        data.balance = data.totalCost - data.paid;
-        const idx = events.findIndex(ev => ev.id === data.id);
-        if (idx > -1) events[idx] = data;
-        else events.unshift(data);
-        saveEvents();
-        hideModal();
-        render();
-      });('click', function(e) {
-        e.preventDefault();
-        console.log('Save clicked');
-        // Collect form data
-        const data = Object.fromEntries(new FormData(eventForm));
-        console.log('Form Data:', data);
-        data.id = data.id ? Number(data.id) : Date.now();
-        data.totalCost = parseFloat(data.totalCost) || 0;
-        data.paid = parseFloat(data.paid) || 0;
-        data.balance = data.totalCost - data.paid;
-        const idx = events.findIndex(ev => ev.id === data.id);
-        if (idx > -1) events[idx] = data;
-        else events.unshift(data);
-        saveEvents();
-        hideModal();
-        render();
+
+      // Auth
+      function showLogin() { loginModal.classList.remove('hidden'); }
+      function hideLogin() { loginModal.classList.add('hidden'); }
+      loginBtn.addEventListener('click', () => {
+        if (pinInput.value === '0000') { loggedIn = true; hideLogin(); render(); }
+        else alert('Invalid PIN');
       });
-
-      const filterOptions = ['All','Scheduled','Ongoing','Completed','Cancelled','Earned','Balance'];
-      const icons = {Scheduled:'📅',Ongoing:'⏱️',Completed:'✅',Cancelled:'❌',Total:'📦',Earned:'💲',Balance:'💰'};
-      const statusClasses = {Scheduled:'bg-blue-50 text-blue-800',Ongoing:'bg-amber-50 text-amber-800',Completed:'bg-green-50 text-green-800',Cancelled:'bg-red-50 text-red-800'};
-
-      function saveEvents(){localStorage.setItem('events',JSON.stringify(events));}
-      function showLogin(){loginModal.classList.remove('hidden');}
-      function hideLogin(){loginModal.classList.add('hidden');}
-      function showModal(){modal.classList.remove('hidden');}
-      function hideModal(){modal.classList.add('hidden');}
-
-      loginBtn.addEventListener('click',()=>{
-        if(pinInput.value==='0000'){loggedIn=true;hideLogin();render();}else alert('Invalid PIN');
+      logoutBtn.addEventListener('click', () => {
+        loggedIn = false; showLogin();
       });
-      logoutBtn.addEventListener('click',()=>{loggedIn=false;showLogin();});
-      addEventBtn.addEventListener('click',()=>openEditor(null));
-      // Close modal on clickin 'X'
+      showLogin();
+
+      // Modal handlers
+      function showModal() { modal.classList.remove('hidden'); }
+      function hideModal() { modal.classList.add('hidden'); }
       closeModalBtn.addEventListener('click', hideModal);
 
-      filterOptions.forEach(opt=>{
-        const btn=document.createElement('button');btn.textContent=opt;btn.className='px-3 py-1 border rounded';
-        btn.addEventListener('click',()=>{activeFilter=opt;render();});filtersDiv.append(btn);
-        const option=document.createElement('option');option.value=opt;option.text=opt;filterSelect.append(option);
+      function openEditor(id) {
+        eventForm.reset(); detailsView.innerHTML = '';
+        modalTitle.textContent = id ? 'Edit Event' : 'New Event';
+        modalActions.classList.remove('hidden'); eventForm.classList.remove('hidden');
+        if (id) {
+          const ev = events.find(e => e.id == id);
+          Object.keys(ev).forEach(k => {
+            if (eventForm.elements[k]) eventForm.elements[k].value = ev[k];
+          });
+        }
+        showModal();
+      }
+      function viewDetails(id) {
+        eventForm.classList.add('hidden'); detailsView.innerHTML = '';
+        modalTitle.textContent = 'Event Details';
+        const ev = events.find(e => e.id == id);
+        ['eventName','customerName','phone','address','venue','status','dateTime','totalCost','paid','balance']
+          .forEach(key => {
+            const p = document.createElement('p');
+            p.innerHTML = `<strong>${key}:</strong> ${key==='dateTime'?new Date(ev[key]).toLocaleString():ev[key]}`;
+            detailsView.appendChild(p);
+          });
+        modalActions.classList.add('hidden'); showModal();
+      }
+      function deleteEvent(id) {
+        if (confirm('Delete this event?')) {
+          db.child(id).remove();
+        }
+      }
+      window.openEditor = openEditor;
+      window.viewDetails = viewDetails;
+      window.deleteEvent = deleteEvent;
+      addEventBtn.addEventListener('click', () => openEditor(null));
+
+      // Firebase sync
+      db.on('value', snapshot => {
+        events = [];
+        snapshot.forEach(child => {
+          events.push({ id: child.key, ...child.val() });
+        });
+        render();
       });
-      filterSelect.addEventListener('change',e=>{activeFilter=e.target.value;render();});
-      searchInput.addEventListener('input',render);
 
-      window.openEditor=id=>{eventForm.reset();detailsView.classList.add('hidden');eventForm.classList.remove('hidden');modalTitle.textContent=id?'Edit Event':'New Event';
-        if(id){const ev=events.find(e=>e.id===id);for(let k in ev)if(eventForm.elements[k])eventForm.elements[k].value=ev[k];}
-        document.getElementById('modalActions').classList.remove('hidden');showModal();};
-      window.viewDetails=id=>{detailsView.innerHTML='';detailsView.classList.remove('hidden');eventForm.classList.add('hidden');modalTitle.textContent='Event Details';
-        const ev=events.find(e=>e.id===id);['eventName','customerName','phone','address','venue','status','dateTime','totalCost','paid','balance'].forEach(key=>{
-          const p=document.createElement('p');p.innerHTML=`<strong>${key}:</strong> ${key==='dateTime'?new Date(ev[key]).toLocaleString():ev[key]}`;detailsView.append(p);
-        });document.getElementById('modalActions').classList.add('hidden');showModal();};
-      window.deleteEvent=id=>{if(confirm('Delete?')){events=events.filter(e=>e.id!==id);saveEvents();render();}};
+      saveBtn.addEventListener('click', e => {
+        e.preventDefault();
+        if (!loggedIn) return;
+        if (eventForm.classList.contains('hidden')) return;
+        const data = Object.fromEntries(new FormData(eventForm));
+        data.id = data.id ? data.id : db.push().key;
+        data.totalCost = parseFloat(data.totalCost) || 0;
+        data.paid = parseFloat(data.paid) || 0;
+        data.balance = data.totalCost - data.paid;
+        db.child(data.id).set(data);
+        hideModal();
+      });
 
-      function applyFilters(list){const term=searchInput.value.trim().toLowerCase();return list.filter(e=>{if(activeFilter!=='All'){if(activeFilter==='Earned'&&+e.paid<=0)return false;if(activeFilter==='Balance'&&(+e.totalCost-e.paid)<=0)return false;if(['Scheduled','Ongoing','Completed','Cancelled'].includes(activeFilter)&&e.status!==activeFilter)return false;}if(term)return e.customerName.toLowerCase().includes(term)||e.phone.toLowerCase().includes(term);return true;});}
+      // Filters & rendering
+      const filterOptions = ['All','Scheduled','Ongoing','Completed','Cancelled','Most Recent'];
+      const statusColors = {
+        Scheduled: { bg:'bg-blue-100', text:'text-blue-800', border:'border-blue-500' },
+        Ongoing:   { bg:'bg-yellow-100', text:'text-yellow-800', border:'border-yellow-500' },
+        Completed: { bg:'bg-green-100', text:'text-green-800', border:'border-green-500' },
+        Cancelled: { bg:'bg-red-100', text:'text-red-800', border:'border-red-500' }
+      };
 
-      function renderStats(){const counts={Scheduled:0,Ongoing:0,Completed:0,Cancelled:0};let earned=0,balance=0;events.forEach(e=>{counts[e.status]++;earned+=+e.paid;balance+=(+e.totalCost-e.paid)});const data=[{label:'All Events',value:events.length,icon:icons.Total,filter:'All'},...['Scheduled','Ongoing','Completed','Cancelled'].map(s=>({label:s,value:counts[s],icon:icons[s],filter:s})),{label:'Total Earned',value:`$${earned.toFixed(2)}`,icon:icons.Earned,filter:'Earned'},{label:'Balance',value:`$${balance.toFixed(2)}`,icon:icons.Balance,filter:'Balance'}];stats.innerHTML='';data.forEach(item=>{const c=document.createElement('div');c.className='p-4 rounded shadow text-center cursor-pointer';c.classList.toggle('bg-indigo-600',item.filter===activeFilter);c.classList.toggle('text-white',item.filter===activeFilter);c.innerHTML=`<div class="text-2xl mb-1">${item.icon}</div><div class="text-sm">${item.label}</div><div class="text-xl font-semibold">${item.value}</div>`;c.addEventListener('click',()=>{activeFilter=item.filter;render();});stats.append(c);});}
+      function renderFilters() {
+        filtersDiv.innerHTML = '';
+        filterOptions.forEach(opt => {
+          const btn = document.createElement('button');
+          btn.textContent = opt;
+          btn.classList.add('px-3','py-1','border','rounded');
+          if (opt === activeFilter) btn.classList.add('active');
+          btn.addEventListener('click', () => { activeFilter = opt; render(); });
+          filtersDiv.appendChild(btn);
+        });
+      }
 
-      function render(){if(!loggedIn)return;renderStats();filtersDiv.querySelectorAll('button').forEach(btn=>{btn.classList.toggle('bg-indigo-600',btn.textContent===activeFilter);btn.classList.toggle('text-white',btn.textContent===activeFilter);});filterSelect.value=activeFilter;const list=applyFilters(events);tableBody.innerHTML='';list.forEach(e=>{const tr=document.createElement('tr');tr.innerHTML=`<td data-label="Event">${e.eventName}</td><td data-label="Customer">${e.customerName}</td><td data-label="Phone">${e.phone}</td><td data-label="Date">${new Date(e.dateTime).toLocaleString()}</td><td data-label="Status"><span class="px-2 py-1 rounded ${statusClasses[e.status]}">${e.status}</span></td><td data-label="Total">$${(+e.totalCost).toFixed(2)}</td><td data-label="Paid">$${(+e.paid).toFixed(2)}</td><td data-label="Balance">$${((+e.totalCost-e.paid)).toFixed(2)}</td><td data-label="Actions"><button onclick="viewDetails(${e.id})">ℹ️</button><button onclick="openEditor(${e.id})">✏️</button><button onclick="deleteEvent(${e.id})">🗑️</button></td>`;tableBody.append(tr);});}
+      function getFiltered() {
+        const term = searchInput.value.trim().toLowerCase();
+        let list = events.filter(e => {
+          if (['Scheduled','Ongoing','Completed','Cancelled'].includes(activeFilter) && e.status !== activeFilter) return false;
+          if (term && !((e.customerName||'').toLowerCase().includes(term) || (e.phone||'').includes(term))) return false;
+          return true;
+        });
+        if (activeFilter !== 'Most Recent') {
+          list.sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+        }
+        return list;
+      }
 
-      showLogin();
+      function renderStats() {
+        const counts = { Scheduled:0, Ongoing:0, Completed:0, Cancelled:0 };
+        let te = 0, tb = 0;
+        events.forEach(e => {
+          counts[e.status]++;
+          if (e.status !== 'Cancelled') {
+            te += (parseFloat(e.paid)||0);
+            tb += (parseFloat(e.totalCost)||0) - (parseFloat(e.paid)||0);
+          }
+        });
+        const cards = [
+          {label:'All Events', value:events.length, icon:'📦', filter:'All', color:'indigo'},
+          {label:'Scheduled', value:counts.Scheduled, icon:'📅', filter:'Scheduled', color:'blue'},
+          {label:'Ongoing',   value:counts.Ongoing,   icon:'⏱️', filter:'Ongoing',   color:'yellow'},
+          {label:'Completed', value:counts.Completed, icon:'✅', filter:'Completed', color:'green'},
+          {label:'Cancelled', value:counts.Cancelled, icon:'❌', filter:'Cancelled', color:'red'},
+          {label:'Total Earned', value:te.toFixed(2), icon:'💲', filter:'Earned', color:'teal'},
+          {label:'Balance',      value:tb.toFixed(2), icon:'💰', filter:'Balance', color:'pink'}
+        ];
+        stats.innerHTML = '';
+        cards.forEach(it => {
+          const c = document.createElement('div');
+          c.className = `p-4 rounded shadow text-center cursor-pointer bg-${it.color}-50 border-2 border-${it.color}-500 text-${it.color}-900`;
+          c.innerHTML = `
+            <div class="text-2xl mb-1">${it.icon}</div>
+            <div class="text-sm">${it.label}</div>
+            <div class="text-xl font-semibold">${it.value}</div>`;
+          c.addEventListener('click', () => { activeFilter = it.filter; render(); });
+          stats.appendChild(c);
+        });
+      }
+
+      function renderRows() {
+        eventsBody.innerHTML = '';
+        getFiltered().forEach(e => {
+          const tr = document.createElement('tr');
+          const col = statusColors[e.status] || {bg:'bg-gray-100',text:'text-gray-800',border:'border-gray-500'};
+          tr.className = `bg-white border-l-4 ${col.border}`;
+          tr.innerHTML = `
+            <td>${e.eventName||''}</td>
+            <td>${e.customerName||''}</td>
+            <td>${e.phone||''}</td>
+            <td>${e.dateTime?new Date(e.dateTime).toLocaleString():''}</td>
+            <td><span class="inline-flex items-center justify-center h-8 px-3 rounded border ${col.bg} ${col.text} ${col.border} text-sm font-medium">${e.status||''}</span></td>
+            <td>$${(parseFloat(e.totalCost)||0).toFixed(2)}</td>
+            <td>$${(parseFloat(e.paid)||0).toFixed(2)}</td>
+            <td>$${(((parseFloat(e.totalCost)||0)-(parseFloat(e.paid)||0))).toFixed(2)}</td>
+            <td>
+              <button data-action="details" data-id="${e.id}">ℹ️</button>
+              <button data-action="edit"    data-id="${e.id}">✏️</button>
+              <button data-action="delete"  data-id="${e.id}">🗑️</button>
+            </td>`;
+          eventsBody.appendChild(tr);
+        });
+      }
+
+      eventsBody.addEventListener('click', e => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action'), id = btn.getAttribute('data-id');
+        if (action==='details') viewDetails(id);
+        if (action==='edit')    openEditor(id);
+        if (action==='delete')  deleteEvent(id);
+      });
+
+      function render() {
+        if (!loggedIn) return;
+        renderStats();
+        renderFilters();
+        renderRows();
+      }
+
+      searchInput.addEventListener('input', render);
+      render();
     });
   </script>
 </body>
