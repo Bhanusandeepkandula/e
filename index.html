@@ -392,7 +392,7 @@ loginBtn.addEventListener('click', () => {
     emailjs.send("service_ihr1f1u", "template_ikihifw", {
       heading: "❌ Event Cancelled",
       to_name: ev.customerName || "Guest",
-      to_email: "sandeepkandula8@gmail.com",
+      to_email: "eventplanner991@gmail.com",
       event_name: ev.eventName || "",
       customer_name: ev.customerName || "",
       phone: ev.phone || "",
@@ -433,7 +433,7 @@ loginBtn.addEventListener('click', () => {
 const upcomingEvents = events.filter(ev => {
   const eventDate = new Date(ev.dateTime);
   const diffHours = (eventDate - now) / (1000 * 60 * 60);
-  return diffHours > 0 && diffHours <= 24;
+  return diffHours > 0 && diffHours <= 48;
 });
 
 let headingText = "New Event Created"; // default
@@ -524,7 +524,7 @@ data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : 
 emailjs.send("service_ihr1f1u", "template_ikihifw", {
   heading: isNew ? "🆕 New Event Scheduled" : "✏️ Event Updated",
   to_name: data.customerName || "Guest",
-  to_email: "sandeepkandula8@gmail.com",
+  to_email: "eventplanner991@gmail.com",
   event_name: data.eventName || "",
   customer_name: data.customerName || "",
   phone: data.phone || "",
