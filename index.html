@@ -7,9 +7,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
-    body { font-family: 'Inter', sans-serif; }
+     body {
+    font-family: 'Work Sans', sans-serif;
+  }
     input, select { border: 1px solid #CBD5E1 !important; height: calc(3rem * 1.005) !important; }
     .hidden { display: none !important; }  
     #eventsTable { table-layout: auto; width: 100%; }
@@ -44,12 +47,17 @@
       border-color: #4F46E5;
     }
     @media (max-width: 640px) {
-      #filters { display: none; }
+      #filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
       #eventsTable { display: none; }
       #eventCards { display: grid; grid-template-columns: 1fr; gap: 1rem; }
     }
     #searchInput {
-      height: 2.5rem;
+      height: 0rem;
       padding: 0.5rem 0.75rem;
       font-size: 0.875rem;
     }
@@ -57,39 +65,75 @@
       border-color: #4F46E5;
       box-shadow: 0 0 0 2px rgba(79,70,229,0.3);
     }
+    
+    .filters-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.#filters::-webkit-scrollbar {
+  height: 5px;
+}
+#filters::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+}
+
+
   </style>
 </head>
 <body class="bg-gray-50 p-6">
   <!-- Login Modal -->
-  <div id="loginModal" class="fixed inset-0 flex items-center justify-center bg-white bg-opacity-100">
-    <div class="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg">
-      <h2 class="text-xl font-semibold mb-4">Enter PIN</h2>
-      <input id="pinInput" type="password" maxlength="4" placeholder="••••" class="w-full bg-gray-50 rounded-md shadow-sm px-3 py-2 text-center text-xl border"/>
-      <button id="loginBtn" class="mt-4 w-full bg-indigo-600 text-white px-4 py-2 rounded">Login</button>
-    </div>
+  <div id="loginModal" class="fixed inset-0 flex items-center justify-center bg-white bg-opacity-100 z-50">
+  <div class="bg-white rounded-xl p-6 w-[90vw] max-w-sm shadow-xl border-2 border-indigo-200">
+    <h2 class="text-2xl font-bold mb-4 text-center text-indigo-700">🔐 Secure Access</h2>
+    <input id="pinInput" type="password" maxlength="4" placeholder="🔢 Enter 4-digit PIN"
+      class="w-full bg-gray-50 rounded-md shadow-sm px-4 py-3 text-center text-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
+    <button id="loginBtn" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 transition text-white px-4 py-2 rounded-md font-semibold shadow">
+      🔓 Login
+    </button>
   </div>
+</div>
 
-  <header class="flex justify-between items-center mb-6">
-    <div>
-      <h1 class="text-3xl font-extrabold">Event Planner</h1>
-      <p class="text-gray-500">Organize and keep track of all your events</p>
-    </div>
-    <div class="space-x-2">
-      <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded">Logout</button>
-      <button id="addEventBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">+ Add Event</button>
-    </div>
-  </header>
+
+<header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+  <div>
+    <h1 class="text-2xl font-extrabold">Event Planner</h1>
+    <p class="text-gray-500">Organize and keep track of all your events</p>
+  </div>
+  <div class="flex gap-2 w-full sm:w-auto justify-end">
+    <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded w-full sm:w-auto">Logout</button>
+    <button id="addEventBtn" class="bg-indigo-600 text-white px-4 py-2 rounded w-full sm:w-auto">+ Add Event</button>
+  </div>
+</header>
+
 
   <section id="stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4 mb-6"></section>
 
-  <div class="mb-4 flex items-center justify-between">
-    <div class="flex items-center space-x-4">
-      <h2 class="text-2xl font-semibold">Events</h2>
-      <input id="searchInput" type="text" placeholder="Search by customer or phone" class="px-3 py-2 border rounded shadow-sm"/>
-    <button id="exportCsvBtn" class="bg-green-600 text-white px-4 py-2 rounded">Export CSV</button>
-</div>
-    <div id="filters"></div>
+<!-- Improved Toolbar Layout -->
+<div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+  <!-- Left: Events title + Search -->
+  <div class="flex items-center gap-2 flex-wrap">
+    <h2 class="text-xl font-semibold whitespace-nowrap">Events</h2>
+    <input id="searchInput" type="text" placeholder="Search by customer or phone"
+  class="px-3 py-2 h-10 border rounded shadow-sm w-60 sm:w-80" />
+
   </div>
+
+  <!-- Right: Filters + Export -->
+  <div class="flex items-center gap-2 overflow-x-auto max-w-full sm:justify-end">
+    <div id="filters" class="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300 pr-1">
+</div>
+
+    <button id="exportCsvBtn"
+  class="bg-green-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-green-700 transition">
+  Export CSV
+</button>
+
+  </div>
+</div>
+
+
+
+
 
   <div class="overflow-x-auto bg-white rounded-xl shadow-card">
     <table id="eventsTable" class="min-w-full divide-y divide-gray-200">
@@ -112,46 +156,64 @@
       Showing <span id="eventCount" class="font-semibold text-gray-900">0</span> events
     </div>
   </div>
+  <!-- Mobile Cards View -->
+<div id="eventCards" class="sm:hidden grid gap-4 mt-4"></div>
+
 
   <!-- Modal -->
-  <div id="modal" class="fixed inset-0 flex hidden items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white rounded-lg p-6 w-full max-w-2xl shadow-lg">
+<!-- Modal -->
+<div id="modal" class="fixed inset-0 hidden bg-black bg-opacity-50 z-50 p-4 overflow-y-auto">
+  <div class="min-h-screen flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 w-[90vw] sm:w-full max-w-2xl shadow-lg">
+
+      <!-- Modal Header -->
       <div class="flex justify-between items-center mb-4">
-        <h2 id="modalTitle" class="text-xl font-semibold"></h2>
-        <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700">✕</button>
+        <h2 id="modalTitle" class="text-xl font-semibold text-gray-800">📋 Event Details</h2>
+        <div class="flex items-center gap-3">
+          <button onclick="printInvoice()" class="bg-blue-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-blue-700 transition">
+            🖨️ Print Invoice
+          </button>
+          <button id="closeModalBtn" class="text-gray-500 hover:text-red-500 text-xl font-bold h-10 w-10 flex items-center justify-center">
+            ✕
+          </button>
+        </div>
       </div>
-      <div id="detailsView" class="space-y-2"></div>
+
+      <!-- Modal Details View -->
+      <div id="detailsView" class="space-y-2 text-sm text-gray-700 px-1 max-h-[70vh] overflow-y-auto"></div>
+
+      <!-- Modal Form -->
       <form id="eventForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
-        <input type="hidden" name="id"/>
+        <input type="hidden" name="id" />
         <div>
           <label class="block text-sm font-medium">Event Name</label>
           <select id="eventTypeDropdown" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3">
-  <option value="">-- Select Event Type --</option>
-  <option>House Warming</option>
-  <option>Half Saree Function</option>
-  <option>Haldi</option>
-  <option>Sweet Sixteen Party</option>
-  <option>Marriage Mandap & Anniversary</option>
-  <option>Graduation Party</option>
-  <option value="custom">Other (Enter Custom)</option>
-</select>
-<input name="eventName" id="customEventName" class="border mt-2 block w-full bg-gray-50 rounded-md shadow-sm px-3 hidden" placeholder="Enter custom event name"/>
-</div>
+            <option value="">-- Select Event Type --</option>
+            <option>House Warming</option>
+            <option>Half Saree Function</option>
+            <option>Haldi</option>
+            <option>Sweet Sixteen Party</option>
+            <option>Marriage Mandap & Anniversary</option>
+            <option>Graduation Party</option>
+            <option value="custom">Other (Enter Custom)</option>
+          </select>
+          <input name="eventName" id="customEventName" class="border mt-2 block w-full bg-gray-50 rounded-md shadow-sm px-3 hidden" placeholder="Enter custom event name" />
+        </div>
         <div>
           <label class="block text-sm font-medium">Customer</label>
-          <input name="customerName" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter customer name"/>
+          <input name="customerName" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter customer name" />
         </div>
         <div>
           <label class="block text-sm font-medium">Phone</label>
-          <input name="phone" type="tel" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter phone number"/>
+          <input name="phone" type="tel" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter phone number" />
         </div>
         <div>
           <label class="block text-sm font-medium">Address</label>
-          <input name="address" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter address"/>
+          <input name="address" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter address" />
         </div>
         <div>
           <label class="block text-sm font-medium">Venue</label>
-          <input name="venue" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter venue"/>
+          <input name="venue" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter venue" />
         </div>
         <div>
           <label class="block text-sm font-medium">Status</label>
@@ -164,23 +226,27 @@
         </div>
         <div>
           <label class="block text-sm font-medium">Date & Time</label>
-          <input name="dateTime" type="datetime-local" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/>
+          <input name="dateTime" type="datetime-local" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
         </div>
         <div>
           <label class="block text-sm font-medium">Total Cost ($)</label>
-          <input name="totalCost" type="number" step="0.01" placeholder="0.00" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/>
+          <input name="totalCost" type="number" step="0.01" placeholder="0.00" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
         </div>
         <div>
           <label class="block text-sm font-medium">Amount Paid ($)</label>
-          <input name="paid" type="number" step="0.01" placeholder="0.00" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3"/>
+          <input name="paid" type="number" step="0.01" placeholder="0.00" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
         </div>
       </form>
+
+      <!-- Modal Actions -->
       <div id="modalActions" class="flex justify-end space-x-3 mt-4 hidden">
         <button id="cancelBtn" class="px-4 py-2 border rounded-md text-gray-700">Reset</button>
         <button id="saveBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-md">Save</button>
       </div>
+
     </div>
   </div>
+</div>
 
   <script>
     // Firebase config and init
@@ -260,21 +326,41 @@ eventTypeDropdown.addEventListener('change', () => {
         showModal();
       }
       function viewDetails(id) {
-        eventForm.classList.add('hidden'); detailsView.innerHTML = '';
-        modalTitle.textContent = 'Event Details';
-        const ev = events.find(e => e.id == id);
-        ['eventName','customerName','phone','address','venue','status','dateTime','totalCost','paid','balance','createdAt']
-          .forEach(key => {
-            const p = document.createElement('p');
-            let value = ev[key];
-if (key === 'dateTime' || key === 'createdAt') {
-  value = new Date(ev[key]).toLocaleString();  // converts to local readable format
+  eventForm.classList.add('hidden');
+  detailsView.innerHTML = '';
+  modalTitle.textContent = '📋 Event Details';
+
+  const ev = events.find(e => e.id == id);
+
+  const fields = [
+    { label: "📝 Event Name", key: "eventName" },
+    { label: "👤 Customer", key: "customerName" },
+    { label: "📞 Phone", key: "phone" },
+    { label: "🏠 Address", key: "address" },
+    { label: "📍 Venue", key: "venue" },
+    { label: "📌 Status", key: "status" },
+    { label: "📅 Date & Time", key: "dateTime" },
+    { label: "💰 Total Cost", key: "totalCost" },
+    { label: "✅ Paid", key: "paid" },
+    { label: "⏳ Balance", key: "balance" },
+    { label: "🕒 Created At", key: "createdAt" }
+  ];
+
+  fields.forEach(({ label, key }) => {
+    const value = ev[key]
+      ? (key.includes("date") ? new Date(ev[key]).toLocaleString() : ev[key])
+      : "—";
+
+    const p = document.createElement("div");
+    p.className = "flex justify-between items-center border-b py-2 text-sm text-gray-700";
+    p.innerHTML = `<span class="font-medium">${label}:</span> <span class="text-right">${value}</span>`;
+    detailsView.appendChild(p);
+  });
+
+  modalActions.classList.add('hidden');
+  showModal();
 }
-p.innerHTML = `<strong>${key}:</strong> ${value}`;
-detailsView.appendChild(p);
-          });
-        modalActions.classList.add('hidden'); showModal();
-      }
+
       function deleteEvent(id) {
         if (confirm('Delete this event?')) {
           db.child(id).remove();
@@ -441,6 +527,32 @@ data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : 
     </div>
   `;
 }
+function printInvoice() {
+  const printableContent = detailsView.innerHTML;
+
+  const printWindow = window.open('', '', 'height=600,width=800');
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Invoice</title>
+        <style>
+          body { font-family: 'Inter', sans-serif; padding: 20px; }
+          .field { display: flex; justify-content: space-between; margin-bottom: 8px; }
+          .label { font-weight: bold; }
+          hr { margin: 12px 0; }
+        </style>
+      </head>
+      <body>
+        <h2>🧾 Event Invoice</h2>
+        <hr />
+        ${printableContent}
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
 
        function renderRows() {
   const searchTerm = searchInput.value.toLowerCase().trim();
@@ -490,6 +602,34 @@ data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : 
   `).join('');
 
   eventCount.textContent = filtered.length;
+  
+  const eventCards = document.getElementById('eventCards');
+  eventCards.innerHTML = filtered.map(event => `
+    <div class="bg-white shadow rounded-lg p-4">
+      <div class="flex justify-between items-center">
+        <div class="text-lg font-semibold">${event.eventName}</div>
+        <span class="text-sm px-2 py-1 rounded-full ${
+          event.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+          event.status === 'Ongoing' ? 'bg-yellow-100 text-yellow-800' :
+          event.status === 'Completed' ? 'bg-green-100 text-green-800' :
+          'bg-red-100 text-red-800'
+        }">${event.status}</span>
+      </div>
+      <div class="text-sm text-gray-600 mt-2">${new Date(event.dateTime).toLocaleString()}</div>
+      <div class="text-sm mt-2"><strong>Customer:</strong> ${event.customerName}</div>
+      <div class="text-sm"><strong>Phone:</strong> ${event.phone}</div>
+      <div class="text-sm"><strong>Total:</strong> $${parseFloat(event.totalCost).toFixed(2)}</div>
+      <div class="text-sm"><strong>Paid:</strong> $${parseFloat(event.paid).toFixed(2)}</div>
+      <div class="text-sm"><strong>Balance:</strong> $${(event.totalCost - event.paid).toFixed(2)}</div>
+      <div class="mt-3 flex flex-wrap gap-3 text-sm">
+  <button onclick="viewDetails('${event.id}')" class="text-indigo-600 hover:underline">ℹ️ Details</button>
+  <button onclick="openEditor('${event.id}')" class="text-yellow-600 hover:underline">✏️ Edit</button>
+  <button onclick="deleteEvent('${event.id}')" class="text-red-600 hover:underline">🗑️ Delete</button>
+  <button onclick="downloadICS('${event.id}')" class="text-green-600 hover:underline" title="Add to Calendar">📅</button>
+</div>
+
+    </div>
+  `).join('');
 }
       eventsBody.addEventListener('click', e => {
         const btn = e.target.closest('button[data-action]');
@@ -499,6 +639,7 @@ data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : 
         if (action==='edit')    openEditor(id);
         if (action==='delete')  deleteEvent(id);
       });
+      
       
       function downloadICS(eventId) {
   const ev = events.find(e => e.id === eventId);
