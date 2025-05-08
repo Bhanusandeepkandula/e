@@ -76,6 +76,14 @@
   background: #cbd5e1;
   border-radius: 5px;
 }
+.admin-badge {
+  background-color: #f3e8ff;
+  color: #7c3aed;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+}
 
 
   </style>
@@ -97,6 +105,7 @@
 <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
   <div>
     <h1 class="text-2xl font-extrabold">Event Planner</h1>
+    <p id="roleBadge" class="text-gray-500 mt-1 text-sm"></p>
     <p class="text-gray-500">Organize and keep track of all your events</p>
   </div>
   <div class="flex gap-2 w-full sm:w-auto justify-end">
@@ -125,7 +134,7 @@
 
     <button id="exportCsvBtn"
   class="bg-green-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-green-700 transition">
-  Export CSV
+  Export
 </button>
 
   </div>
@@ -140,15 +149,16 @@
       <thead class="bg-gray-100">
         <tr>
           <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Event</th>
-          <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Customer</th>
-          <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Phone</th>
-          <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Date</th>
-          <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Status</th>
-          <th class="px-6 py-3 text-right text-sm font-medium text-gray-600">Total</th>
-          <th class="px-6 py-3 text-right text-sm font-medium text-gray-600">Paid</th>
-          <th class="px-6 py-3 text-right text-sm font-medium text-gray-600">Balance</th>
-          <th class="px-6 py-3 text-right text-sm font-medium text-gray-600">Actions</th>
-        </tr>
+    <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Customer</th>
+    <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Phone</th>
+    <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Date</th>
+    <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Status</th>
+    <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Created By</th>
+    <th class="px-6 py-3 text-right text-sm font-medium text-gray-600">Total</th>
+    <th class="px-6 py-3 text-right text-sm font-medium text-gray-600">Paid</th>
+    <th class="px-6 py-3 text-right text-sm font-medium text-gray-600">Balance</th>
+    <th class="px-6 py-3 text-right text-sm font-medium text-gray-600">Actions</th>
+    </tr>
       </thead>
       <tbody id="eventsBody" class="divide-y divide-gray-100"></tbody>
     </table>
@@ -171,7 +181,7 @@
         <h2 id="modalTitle" class="text-xl font-semibold text-gray-800">📋 Event Details</h2>
         <div class="flex items-center gap-3">
           <button onclick="printInvoice()" class="bg-blue-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-blue-700 transition">
-            🖨️ Print Invoice
+            🖨️ Print
           </button>
           <button id="closeModalBtn" class="text-gray-500 hover:text-red-500 text-xl font-bold h-10 w-10 flex items-center justify-center">
             ✕
@@ -299,10 +309,22 @@ eventTypeDropdown.addEventListener('change', () => {
       // Auth
       function showLogin() { loginModal.classList.remove('hidden'); }
       function hideLogin() { loginModal.classList.add('hidden'); }
-      loginBtn.addEventListener('click', () => {
-        if (pinInput.value === '0000') { loggedIn = true; hideLogin(); render(); }
-        else alert('Invalid PIN');
-      });
+      const roles = { '0000': 'user', '1234': 'admin' };
+let currentRole = null;
+
+loginBtn.addEventListener('click', () => {
+  const pin = pinInput.value;
+  if (roles[pin]) {
+    currentRole = roles[pin];
+    loggedIn = true;
+    hideLogin();
+    document.getElementById("roleBadge").innerHTML = `Logged in as: <span class="admin-badge">${currentRole.toUpperCase()}</span>`;
+    render();
+  } else {
+    alert('Invalid PIN');
+  }
+});
+
       logoutBtn.addEventListener('click', () => {
         loggedIn = false; showLogin();
       });
@@ -361,11 +383,39 @@ eventTypeDropdown.addEventListener('change', () => {
   showModal();
 }
 
-      function deleteEvent(id) {
-        if (confirm('Delete this event?')) {
-          db.child(id).remove();
-        }
-      }
+  function deleteEvent(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return alert("Event not found");
+
+  if (confirm('Delete this event?')) {
+    // Send email BEFORE removing the event
+    emailjs.send("service_ihr1f1u", "template_ikihifw", {
+      heading: "❌ Event Cancelled",
+      to_name: ev.customerName || "Guest",
+      to_email: "sandeepkandula8@gmail.com",
+      event_name: ev.eventName || "",
+      customer_name: ev.customerName || "",
+      phone: ev.phone || "",
+      venue: ev.venue || "",
+      status: ev.status || "",
+      event_date: new Date(ev.dateTime).toLocaleString() || "",
+      total_cost: parseFloat(ev.totalCost || 0).toFixed(2),
+      paid: parseFloat(ev.paid || 0).toFixed(2),
+      balance: (parseFloat(ev.totalCost || 0) - parseFloat(ev.paid || 0)).toFixed(2)
+    });
+
+    // Now delete from Firebase
+    db.child(id).remove().then(() => {
+      events = events.filter(e => e.id !== id);  // Update local state
+      render();  // Re-render UI
+    });
+  }
+}
+
+
+
+        
+      
       window.openEditor = openEditor;
       window.viewDetails = viewDetails;
       window.deleteEvent = deleteEvent;
@@ -379,6 +429,38 @@ eventTypeDropdown.addEventListener('change', () => {
         snapshot.forEach(child => {
           events.push({ id: child.key, ...child.val() });
         });
+        const now = new Date();
+const upcomingEvents = events.filter(ev => {
+  const eventDate = new Date(ev.dateTime);
+  const diffHours = (eventDate - now) / (1000 * 60 * 60);
+  return diffHours > 0 && diffHours <= 24;
+});
+
+let headingText = "New Event Created"; // default
+if (ev.status === "Cancelled") headingText = "Event Cancelled";
+else if (!isNew) headingText = "Event Updated";
+else if (isUpcoming) headingText = "Upcoming Event Reminder";
+
+
+if (trigger === "new") headingText = "🆕 New Event Scheduled";
+else if (trigger === "update") headingText = "✏️ Event Updated";
+else if (trigger === "delete") headingText = "❌ Event Cancelled";
+else if (trigger === "reminder") headingText = "⏰ Upcoming Event Reminder";
+
+emailjs.send("service_ihr1f1u", "template_ikihifw", {
+  heading: headingText,  // e.g., "New Event Created", "Event Updated", etc.
+  event_name: ev.eventName,
+  customer_name: ev.customerName,
+  phone: ev.phone,
+  venue: ev.venue,
+  status: ev.status,
+  event_date: new Date(ev.dateTime).toLocaleString(),
+  total_cost: ev.totalCost,
+  paid: ev.paid,
+  balance: ev.balance
+});
+
+
         document.getElementById('exportCsvBtn').addEventListener('click', () => {
   if (events.length === 0) {
     alert("No events to export.");
@@ -428,6 +510,7 @@ let data = Object.fromEntries(formData);
 data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : eventTypeDropdown.value;
         const isNew = !data.id;
         data.id = data.id ? data.id : db.push().key;
+        data.createdBy = currentRole;
         data.totalCost = parseFloat(data.totalCost) || 0;
         data.paid = parseFloat(data.paid) || 0;
         data.balance = data.totalCost - data.paid;
@@ -437,6 +520,23 @@ data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : 
           }
 
         db.child(data.id).set(data);
+        const emailAction = isNew ? "New Event Added" : "Event Updated";
+emailjs.send("service_ihr1f1u", "template_ikihifw", {
+  heading: isNew ? "🆕 New Event Scheduled" : "✏️ Event Updated",
+  to_name: data.customerName || "Guest",
+  to_email: "sandeepkandula8@gmail.com",
+  event_name: data.eventName || "",
+  customer_name: data.customerName || "",
+  phone: data.phone || "",
+  venue: data.venue || "",
+  status: data.status || "",
+  event_date: new Date(data.dateTime).toLocaleString() || "",
+  total_cost: data.totalCost.toFixed(2),
+  paid: data.paid.toFixed(2),
+  balance: data.balance.toFixed(2)
+});
+
+render(); 
         hideModal();
       });
 
@@ -515,22 +615,24 @@ data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : 
       <div class="text-sm text-gray-600">Cancelled</div>
       <div class="text-xl font-semibold">${counts.Cancelled}</div>
     </div>
-    <div onclick="setFilterFromCard('Paid')" class="p-4 bg-teal-50 rounded-lg border-2 border-teal-200 cursor-pointer">
+    <div onclick="setFilterFromCard('Paid')" class="p-4 stat-card bg-teal-50 rounded-lg border-2 border-teal-200 cursor-pointer">
       <div class="text-teal-600 text-xl mb-2">💲</div>
       <div class="text-sm text-gray-600">Total Earned</div>
       <div class="text-xl font-semibold">$${totalEarned.toFixed(2)}</div>
     </div>
-    <div onclick="setFilterFromCard('Unpaid')" class="p-4 bg-pink-50 rounded-lg border-2 border-pink-200 cursor-pointer">
-      <div class="text-pink-600 text-xl mb-2">💰</div>
+   <div onclick="setFilterFromCard('Unpaid')" class="p-4 stat-card bg-pink-50 rounded-lg border-2 border-pink-200 cursor-pointer">
+ <div class="text-pink-600 text-xl mb-2">💰</div>
       <div class="text-sm text-gray-600">Balance</div>
       <div class="text-xl font-semibold">$${totalBalance.toFixed(2)}</div>
     </div>
   `;
 }
 function printInvoice() {
-  const printableContent = detailsView.innerHTML;
+  const printWindow = window.open('', '', 'width=800,height=600');
+  const content = detailsView.cloneNode(true);
 
-  const printWindow = window.open('', '', 'height=600,width=800');
+  // Optional: Remove any hidden or unnecessary nodes if needed here
+
   printWindow.document.write(`
     <html>
       <head>
@@ -545,7 +647,7 @@ function printInvoice() {
       <body>
         <h2>🧾 Event Invoice</h2>
         <hr />
-        ${printableContent}
+        ${content.innerHTML}
       </body>
     </html>
   `);
@@ -554,7 +656,7 @@ function printInvoice() {
   printWindow.print();
 }
 
-       function renderRows() {
+function renderRows() {
   const searchTerm = searchInput.value.toLowerCase().trim();
   const filtered = events.filter(event => {
     const matchesSearch =
@@ -573,73 +675,111 @@ function printInvoice() {
     return matchesFilter && matchesSearch;
   });
 
-  eventsBody.innerHTML = filtered.map(event => `
-    <tr class="hover:bg-gray-50">
-      <td class="px-6 py-4">${event.eventName}</td>
-      <td class="px-6 py-4">${event.customerName}</td>
-      <td class="px-6 py-4">${event.phone}</td>
-      <td class="px-6 py-4">${new Date(event.dateTime).toLocaleString()}</td>
-      <td class="px-6 py-4">
-        <span class="px-3 py-1 rounded-full text-sm ${
-          event.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
-          event.status === 'Ongoing' ? 'bg-yellow-100 text-yellow-800' :
-          event.status === 'Completed' ? 'bg-green-100 text-green-800' :
-          'bg-red-100 text-red-800'
-        }">${event.status}</span>
-      </td>
-      <td class="px-6 py-4 text-right">$${parseFloat(event.totalCost).toFixed(2)}</td>
-      <td class="px-6 py-4 text-right">$${parseFloat(event.paid).toFixed(2)}</td>
-      <td class="px-6 py-4 text-right">$${(event.totalCost - event.paid).toFixed(2)}</td>
-      <td class="px-6 py-4 text-right space-x-2">
-  
-  <button onclick="viewDetails('${event.id}')" class="text-indigo-600 hover:text-indigo-900">ℹ️</button>
-  <button onclick="openEditor('${event.id}')" class="text-yellow-600 hover:text-yellow-900">✏️</button>
-  <button onclick="deleteEvent('${event.id}')" class="text-red-600 hover:text-red-900">🗑️</button>
-  <button onclick="downloadICS('${event.id}')" class="text-green-600 hover:text-green-900" title="Add to Apple Calendar / Outlook">📅</button>
+  eventsBody.innerHTML = filtered.map(event => {
+    const isAdmin = currentRole === 'admin';
+    const isOwner = event.createdBy === currentRole;
 
-</td>
-    </tr>
-  `).join('');
+    return `
+      <tr class="hover:bg-gray-50">
+        <td class="px-6 py-4">${event.eventName}</td>
+        <td class="px-6 py-4">${event.customerName}</td>
+        <td class="px-6 py-4">${event.phone}</td>
+        <td class="px-6 py-4">${new Date(event.dateTime).toLocaleString()}</td>
+        <td class="px-6 py-4">
+          <span class="px-3 py-1 rounded-full text-sm ${
+            event.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+            event.status === 'Ongoing' ? 'bg-yellow-100 text-yellow-800' :
+            event.status === 'Completed' ? 'bg-green-100 text-green-800' :
+            'bg-red-100 text-red-800'
+          }">${event.status}</span>
+        </td>
+        <td class="px-6 py-4">${event.createdBy || 'user'}</td>
+        <td class="px-6 py-4 text-right">$${parseFloat(event.totalCost).toFixed(2)}</td>
+        <td class="px-6 py-4 text-right">$${parseFloat(event.paid).toFixed(2)}</td>
+        <td class="px-6 py-4 text-right">$${(event.totalCost - event.paid).toFixed(2)}</td>
+        <td class="px-6 py-4 text-right space-x-2">
+          ${
+            isAdmin || isOwner
+              ? `<button onclick="viewDetails('${event.id}')" class="text-indigo-600">ℹ️</button>
+                 <button onclick="openEditor('${event.id}')" class="text-yellow-600">✏️</button>
+                 <button onclick="deleteEvent('${event.id}')" class="text-red-600">🗑️</button>
+                 <button onclick="downloadICS('${event.id}')" class="text-green-600" title="Add to Calendar">📅</button>`
+              : `<span class="text-gray-400 italic">Restricted</span>`
+          }
+        </td>
+      </tr>
+    `;
+  }).join('');
 
   eventCount.textContent = filtered.length;
-  
-  const eventCards = document.getElementById('eventCards');
-  eventCards.innerHTML = filtered.map(event => `
-    <div class="bg-white shadow rounded-lg p-4">
-      <div class="flex justify-between items-center">
-        <div class="text-lg font-semibold">${event.eventName}</div>
-        <span class="text-sm px-2 py-1 rounded-full ${
-          event.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
-          event.status === 'Ongoing' ? 'bg-yellow-100 text-yellow-800' :
-          event.status === 'Completed' ? 'bg-green-100 text-green-800' :
-          'bg-red-100 text-red-800'
-        }">${event.status}</span>
-      </div>
-      <div class="text-sm text-gray-600 mt-2">${new Date(event.dateTime).toLocaleString()}</div>
-      <div class="text-sm mt-2"><strong>Customer:</strong> ${event.customerName}</div>
-      <div class="text-sm"><strong>Phone:</strong> ${event.phone}</div>
-      <div class="text-sm"><strong>Total:</strong> $${parseFloat(event.totalCost).toFixed(2)}</div>
-      <div class="text-sm"><strong>Paid:</strong> $${parseFloat(event.paid).toFixed(2)}</div>
-      <div class="text-sm"><strong>Balance:</strong> $${(event.totalCost - event.paid).toFixed(2)}</div>
-      <div class="mt-3 flex flex-wrap gap-3 text-sm">
-  <button onclick="viewDetails('${event.id}')" class="text-indigo-600 hover:underline">ℹ️ Details</button>
-  <button onclick="openEditor('${event.id}')" class="text-yellow-600 hover:underline">✏️ Edit</button>
-  <button onclick="deleteEvent('${event.id}')" class="text-red-600 hover:underline">🗑️ Delete</button>
-  <button onclick="downloadICS('${event.id}')" class="text-green-600 hover:underline" title="Add to Calendar">📅</button>
-</div>
 
-    </div>
-  `).join('');
+  const eventCards = document.getElementById('eventCards');
+  eventCards.innerHTML = filtered.map(event => {
+    const isAdmin = currentRole === 'admin';
+    const isOwner = event.createdBy === currentRole;
+
+    return `
+      <div class="bg-white shadow rounded-lg p-4">
+        <div class="flex justify-between items-center">
+          <div class="text-lg font-semibold">${event.eventName}</div>
+          <span class="text-sm px-2 py-1 rounded-full ${
+            event.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+            event.status === 'Ongoing' ? 'bg-yellow-100 text-yellow-800' :
+            event.status === 'Completed' ? 'bg-green-100 text-green-800' :
+            'bg-red-100 text-red-800'
+          }">${event.status}</span>
+        </div>
+        <div class="text-sm text-gray-600 mt-2">${new Date(event.dateTime).toLocaleString()}</div>
+        <div class="text-sm mt-2"><strong>Customer:</strong> ${event.customerName}</div>
+        <div class="text-sm"><strong>Phone:</strong> ${event.phone}</div>
+        <div class="text-sm"><strong>Total:</strong> $${parseFloat(event.totalCost).toFixed(2)}</div>
+        <div class="text-sm"><strong>Paid:</strong> $${parseFloat(event.paid).toFixed(2)}</div>
+        <div class="text-sm"><strong>Balance:</strong> $${(event.totalCost - event.paid).toFixed(2)}</div>
+        <div class="text-sm"><strong>Created By:</strong> ${event.createdBy || 'user'}</div>
+        <div class="mt-3 flex flex-wrap gap-3 text-sm">
+          ${
+            isAdmin || isOwner
+              ? `<button onclick="viewDetails('${event.id}')" class="text-indigo-600 hover:underline">ℹ️ Details</button>
+                 <button onclick="openEditor('${event.id}')" class="text-yellow-600 hover:underline">✏️ Edit</button>
+                 <button onclick="deleteEvent('${event.id}')" class="text-red-600 hover:underline">🗑️ Delete</button>
+                 <button onclick="downloadICS('${event.id}')" class="text-green-600 hover:underline" title="Add to Calendar">📅</button>`
+              : `<span class="text-gray-400 italic">Restricted</span>`
+          }
+        </div>
+      </div>
+    `;
+  }).join('');
 }
-      eventsBody.addEventListener('click', e => {
-        const btn = e.target.closest('button[data-action]');
-        if (!btn) return;
-        const action = btn.getAttribute('data-action'), id = btn.getAttribute('data-id');
-        if (action==='details') viewDetails(id);
-        if (action==='edit')    openEditor(id);
-        if (action==='delete')  deleteEvent(id);
-      });
-      
+
+function renderRevenueChart() {
+  const monthlyRevenue = {};
+  events.forEach(event => {
+    if (event.status !== 'Cancelled') {
+      const date = new Date(event.dateTime);
+      const month = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+      if (!monthlyRevenue[month]) monthlyRevenue[month] = 0;
+      monthlyRevenue[month] += parseFloat(event.paid);
+    }
+  });
+
+  const ctx = document.getElementById("revenueChart").getContext("2d");
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(monthlyRevenue),
+      datasets: [{
+        label: 'Monthly Revenue ($)',
+        data: Object.values(monthlyRevenue),
+        backgroundColor: '#4F46E5'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
       
       function downloadICS(eventId) {
   const ev = events.find(e => e.id === eventId);
@@ -691,6 +831,8 @@ function setFilterFromCard(filter) {
         renderStats();
         renderFilters();
         renderRows();
+        //renderRevenueChart();
+
       }
 
       searchInput.addEventListener('input', render);
@@ -739,5 +881,11 @@ function setFilterFromCard(filter) {
 
 
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+  emailjs.init("tMwPoa38QEavEGxTf");
+</script>
+
 </body>
 </html>
