@@ -111,6 +111,9 @@
   <div class="flex gap-2 w-full sm:w-auto justify-end">
     <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded w-full sm:w-auto">Logout</button>
     <button id="addEventBtn" class="bg-indigo-600 text-white px-4 py-2 rounded w-full sm:w-auto">+ Add Event</button>
+    <button id="exportCsvBtn"class="bg-green-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-green-700 transition">
+  Export
+</button>
   </div>
 </header>
 
@@ -126,24 +129,14 @@
   class="px-3 py-2 h-10 border rounded shadow-sm w-60 sm:w-80" />
 
   </div>
-
-  <!-- Right: Filters + Export -->
-  <div class="flex items-center gap-2 overflow-x-auto max-w-full sm:justify-end">
+  <!-- Improved Toolbar Layout -->
+ <div class="flex items-center gap-2 overflow-x-auto max-w-full sm:justify-end">
     <div id="filters" class="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300 pr-1">
 </div>
 
-    <button id="exportCsvBtn"
-  class="bg-green-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-green-700 transition">
-  Export
-</button>
-
   </div>
 </div>
-
-
-
-
-
+ master
   <div class="overflow-x-auto bg-white rounded-xl shadow-card border border-gray-300">
     <table id="eventsTable" class="min-w-full divide-y divide-gray-200">
       <thead class="bg-gray-100">
@@ -335,7 +328,9 @@ loginBtn.addEventListener('click', () => {
       function hideModal() { modal.classList.add('hidden'); }
       closeModalBtn.addEventListener('click', hideModal);
 
+
       function openEditor(id) {
+     function openEditor(id) {
   eventForm.reset(); 
   detailsView.innerHTML = '';
   modalTitle.textContent = id ? 'Edit Event' : 'New Event';
