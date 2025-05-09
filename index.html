@@ -69,7 +69,7 @@
     .filters-scroll::-webkit-scrollbar {
   height: 6px;
 }
-.#filters::-webkit-scrollbar {
+#filters::-webkit-scrollbar {
   height: 5px;
 }
 #filters::-webkit-scrollbar-thumb {
@@ -144,7 +144,7 @@
 
 
 
-  <div class="overflow-x-auto bg-white rounded-xl shadow-card">
+  <div class="overflow-x-auto bg-white rounded-xl shadow-card border border-gray-300">
     <table id="eventsTable" class="min-w-full divide-y divide-gray-200">
       <thead class="bg-gray-100">
         <tr>
@@ -336,15 +336,42 @@ loginBtn.addEventListener('click', () => {
       closeModalBtn.addEventListener('click', hideModal);
 
       function openEditor(id) {
-        eventForm.reset(); detailsView.innerHTML = '';
-        modalTitle.textContent = id ? 'Edit Event' : 'New Event';
-        modalActions.classList.remove('hidden'); eventForm.classList.remove('hidden');
-        if (id) {
-          const ev = events.find(e => e.id == id);
-          Object.keys(ev).forEach(k => {
-            if (eventForm.elements[k]) eventForm.elements[k].value = ev[k];
-          });
-        }
+  eventForm.reset(); 
+  detailsView.innerHTML = '';
+  modalTitle.textContent = id ? 'Edit Event' : 'New Event';
+  modalActions.classList.remove('hidden'); 
+  eventForm.classList.remove('hidden');
+
+  if (id) {
+    const ev = events.find(e => e.id == id);
+    
+    // Set common fields
+    Object.keys(ev).forEach(k => {
+      if (eventForm.elements[k] && k !== "eventName") {
+        eventForm.elements[k].value = ev[k];
+      }
+    });
+
+    // Set Event Name logic
+    const predefinedOptions = [
+      "House Warming",
+      "Half Saree Function",
+      "Haldi",
+      "Sweet Sixteen Party",
+      "Marriage Mandap & Anniversary",
+      "Graduation Party"
+    ];
+
+    if (predefinedOptions.includes(ev.eventName)) {
+      eventTypeDropdown.value = ev.eventName;
+      customEventName.classList.add('hidden');
+      customEventName.value = '';
+    } else {
+      eventTypeDropdown.value = 'custom';
+      customEventName.classList.remove('hidden');
+      customEventName.value = ev.eventName;
+    }
+  }
         showModal();
       }
       function viewDetails(id) {
@@ -404,7 +431,7 @@ loginBtn.addEventListener('click', () => {
       balance: (parseFloat(ev.totalCost || 0) - parseFloat(ev.paid || 0)).toFixed(2)
     });
 
-    // Now delete from Firebase
+    // Now delete from Firebasee
     db.child(id).remove().then(() => {
       events = events.filter(e => e.id !== id);  // Update local state
       render();  // Re-render UI
@@ -600,7 +627,7 @@ render();
       <div class="text-sm text-gray-600">Scheduled</div>
       <div class="text-xl font-semibold">${counts.Scheduled}</div>
     </div>
-    <div onclick="setFilterFromCard('Ongoing')" class="p-4 stat-card bg-yellow-50 rounded-lg border-2 border-yellow-200 cursor-pointer">
+    <div onclick="setFilterFromCard('Ongoing')" class="p-4 stat-card bg-yellow-50 rounded-lg border-2 border-yellow-300 cursor-pointer">
       <div class="text-yellow-600 text-xl mb-2">⏱️</div>
       <div class="text-sm text-gray-600">Ongoing</div>
       <div class="text-xl font-semibold">${counts.Ongoing}</div>
