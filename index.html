@@ -6,19 +6,34 @@
   <title>Event Planner</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+ <script src="https://unpkg.com/@heroicons/vue@2.0.13/dist/heroicons.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+ <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
-<script>
-  emailjs.init("YOUR_PUBLIC_KEY"); // Replace with your actual EmailJS public key
-</script>
 
   <style>
-     body {
-    font-family: 'Work Sans', sans-serif;
-  }
-    input, select { border: 1px solid #CBD5E1 !important; height: calc(3rem * 1.005) !important; }
+   body {
+  font-family: 'Work Sans', sans-serif;
+}
+
+/* General Input/Select Styling */
+/* Form input/select inside modal form only */
+#eventForm input,
+#eventForm select {
+  border: 1px solid #CBD5E1;
+  height: calc(3rem * 1.005);
+}
+/* Filter bar styling (search, sort, filter dropdowns) */
+#searchInput,
+#sortSelect,
+#eventFilter {
+  height: 2.25rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+   border-radius: 0.375rem; /* ≈ 6px, matches Tailwind's rounded-md */
+  border: 1px solid #CBD5E1;
+}
     .hidden { display: none !important; }  
     #eventsTable { table-layout: auto; width: 100%; }
     #eventsTable th, #eventsTable td {
@@ -26,6 +41,8 @@
       vertical-align: middle;
       white-space: nowrap;
     }
+    
+     }
     #eventsTable td:first-child, #eventsTable th:first-child {
       padding-left: 2rem;
     }
@@ -36,51 +53,85 @@
       width: 140px;
       text-align: center;
     }
-    #filters { display: flex; gap: 0.5rem; }
-    #filters button {
-      padding: 0.25rem 0.75rem;
-      font-size: 0.875rem;
-      background: #f3f4f6;
-      color: #374151;
-      border: 1px solid #d1d5db;
-      border-radius: 0.375rem;
-      cursor: pointer;
-    }
-    #filters button.active {
-      background: #4F46E5;
-      color: #fff;
-      border-color: #4F46E5;
-    }
-    @media (max-width: 640px) {
-      #filters {
+
+/* Search input width */
+#searchInput {
+  width: 200px;
+  padding-left: 2.25rem !important;
+  background-color: #ffffff;
+  color: #1f2937; /* darker gray */
+  border: 1px solid #d1d5db;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+
+/* Dropdown widths */
+#sortSelect,
+#eventFilter {
+  width: 160px;
+  padding-right: 2.25rem !important; /* space for chevron */
+}
+
+/* Events Table */
+#eventsTable {
+  table-layout: auto;
+  width: 100%;
+}
+
+#eventsTable th,
+#eventsTable td {
+  padding: 1rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+#eventsTable td:first-child,
+#eventsTable th:first-child {
+  padding-left: 2rem;
+}
+
+#eventsTable th:nth-child(4),
+#eventsTable td:nth-child(4) {
+  width: 180px;
+}
+
+#eventsTable th:nth-child(5),
+#eventsTable td:nth-child(5) {
+  width: 140px;
+  text-align: center;
+}
+
+/* Filter Buttons */
+#filters {
   display: flex;
-  flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
-      #eventsTable { display: none; }
-      #eventCards { display: grid; grid-template-columns: 1fr; gap: 1rem; }
-    }
-    #searchInput {
-      height: 0rem;
-      padding: 0.5rem 0.75rem;
-      font-size: 0.875rem;
-    }
-    #searchInput:focus {
-      border-color: #4F46E5;
-      box-shadow: 0 0 0 2px rgba(79,70,229,0.3);
-    }
-    
-    .filters-scroll::-webkit-scrollbar {
-  height: 6px;
+
+#filters button {
+  height: 2.25rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.#filters::-webkit-scrollbar {
-  height: 5px;
+
+#filters button.active {
+  background: #4F46E5;
+  color: #fff;
+  border-color: #4F46E5;
 }
-#filters::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 5px;
-}
+
+/* Admin role badge */
 .admin-badge {
   background-color: #f3e8ff;
   color: #7c3aed;
@@ -88,6 +139,182 @@
   font-weight: 600;
   padding: 0.25rem 0.5rem;
   border-radius: 0.375rem;
+}
+
+/* Scrollbar styling */
+#filters::-webkit-scrollbar {
+  height: 6px;
+}
+#filters::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+}
+
+/* Responsive: Mobile Layout Fix */
+@media (max-width: 640px) {
+  .filter-container {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+
+  #searchInput,
+  #sortSelect,
+  #eventFilter {
+    width: 100% !important;
+    font-size: 1rem;
+  }
+
+  #filters button {
+    flex: 1 1 48%;
+    min-width: 130px;
+    text-align: center;
+  }
+
+  #eventsTable {
+    display: none;
+  }
+
+  #eventCards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  #stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .stat-card {
+    width: 100%;
+  }
+
+  .text-sm.text-gray-600,
+  .text-xl.font-semibold {
+    text-align: left !important;
+  }
+}
+
+/* Desktop layout: Inputs + Filters neatly side-by-side */
+@media (min-width: 641px) {
+  .filter-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .filter-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+  }
+}
+@media (max-width: 640px) {
+  .filter-container {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .filter-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  #searchInput,
+  #sortSelect,
+  #eventFilter {
+    width: 100% !important;
+    font-size: 1rem;
+  }
+
+  #filters {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  #filters button {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    width: 100%;
+    text-align: center;
+  }
+
+  .stat-card {
+    width: 100%;
+  }
+}
+@media (max-width: 640px) {
+  .filter-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .filter-inputs {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  #searchInput,
+  #sortSelect,
+  #eventFilter {
+    width: 100% !important;
+    font-size: 1rem;
+  }
+
+  #filters {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(48%, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  #filters button {
+    width: 100%;
+    padding: 0.6rem 1rem;
+    font-size: 0.95rem;
+    text-align: center;
+  }
+}
+#filters button:hover {
+  background-color: #e0e7ff;
+}@media (max-width: 640px) {
+  .filter-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .filter-inputs {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  #searchInput,
+  #sortSelect,
+  #eventFilter {
+    width: 100% !important;
+  }
+}
+@media (max-width: 640px) {
+  #stats {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem;
+  }
+
+  .stat-card {
+    width: 100% !important;
+  }
 }
 
 
@@ -98,10 +325,10 @@
   <div id="loginModal" class="fixed inset-0 flex items-center justify-center bg-white bg-opacity-100 z-50">
   <div class="bg-white rounded-xl p-6 w-[90vw] max-w-sm shadow-xl border-2 border-indigo-200">
     <h2 class="text-2xl font-bold mb-4 text-center text-indigo-700">🔐 Secure Access</h2>
-    <input id="pinInput" type="password" maxlength="4" placeholder="🔢 Enter 4-digit PIN"
+    <input id="pinInput" type="password" maxlength="4" placeholder="····"
       class="w-full bg-gray-50 rounded-md shadow-sm px-4 py-3 text-center text-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
     <button id="loginBtn" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 transition text-white px-4 py-2 rounded-md font-semibold shadow">
-      🔓 Login
+      Login
     </button>
   </div>
 </div>
@@ -116,40 +343,73 @@
   <div class="flex gap-2 w-full sm:w-auto justify-end">
     <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded w-full sm:w-auto">Logout</button>
     <button id="addEventBtn" class="bg-indigo-600 text-white px-4 py-2 rounded w-full sm:w-auto">+ Add Event</button>
+    
+
+    <button id="exportCsvBtn"class="bg-green-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-green-700 transition">
+  Export
+</button>
   </div>
 </header>
 
 
   <section id="stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4 mb-6"></section>
 
-<!-- Improved Toolbar Layout -->
-<div class="flex flex-wrap justify-between items-center gap-3 mb-4">
-  <!-- Left: Events title + Search -->
-  <div class="flex items-center gap-2 flex-wrap">
-    <h2 class="text-xl font-semibold whitespace-nowrap">Events</h2>
-    <input id="searchInput" type="text" placeholder="Search by customer or phone"
-  class="px-3 py-2 h-10 border rounded shadow-sm w-60 sm:w-80" />
-
-  </div>
-
-  <!-- Right: Filters + Export -->
-  <div class="flex items-center gap-2 overflow-x-auto max-w-full sm:justify-end">
-    <div id="filters" class="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300 pr-1">
-</div>
-
-    <button id="exportCsvBtn"
-  class="bg-green-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-green-700 transition">
-  Export
-</button>
-
-  </div>
+<div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-4 mb-6">
+  <h2 class="text-xl font-semibold leading-[2.5rem] h-10">Events</h2>
+  
+  <div class="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full sm:w-auto">
+    <div class="flex flex-wrap gap-2 items-center">
+      <!-- Search -->
+<div class="relative w-full sm:w-[200px]">
+  <input id="searchInput" type="text" placeholder="Search by customer or phone"
+    class="pl-10 pr-3 py-2 h-10 border rounded shadow-sm w-full text-sm" />
+  <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
 </div>
 
 
+<!-- Sort -->
+<div class="relative w-full sm:w-[160px]">
+  <select id="sortSelect"
+    class="appearance-none pl-3 pr-8 py-2 h-10 border rounded w-full text-sm text-gray-600">
+<option value="none">Sort by</option>
+  <option value="latest">New to Old</option>
+  <option value="oldest">Old to New</option>
+</select>
+  <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+</div>
+
+<!-- Filter by Event -->
+<div class="relative w-full sm:w-[160px]">
+  <select id="eventFilter"
+    class="appearance-none pl-3 pr-8 py-2 h-10 border rounded w-full text-sm text-gray-600">
+     <option value="all">Filter by Event</option>
+    <option>House Warming</option>
+    <option>Half Saree Function</option>
+    <option>Haldi</option>
+    <option>Sweet Sixteen Party</option>
+    <option>Marriage Mandap & Anniversary</option>
+    <option>Graduation Party</option>
+    <option>Other</option>
+  </select>
+  <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+</div>
+
+    <div id="filters" class="flex flex-wrap gap-2 mt-2 sm:mt-0 sm:ml-4">
+      <!-- Filter buttons injected by JS -->
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 bg-green-600 text-white px-4 py-3 rounded-md shadow-lg hidden transition-opacity duration-300 z-50">
+  ✅ Event added to your Google Calendar!
+</div>
 
 
 
-  <div class="overflow-x-auto bg-white rounded-xl shadow-card">
+  </div>
+</div>
+
+  <div class="overflow-x-auto bg-white rounded-xl shadow-card border border-gray-300">
     <table id="eventsTable" class="min-w-full divide-y divide-gray-200">
       <thead class="bg-gray-100">
         <tr>
@@ -282,6 +542,8 @@
       let events = [];
       let activeFilter = 'All';
       let loggedIn = false;
+      let activeRevenueFilter = null;
+
 
       // Elements
       const loginModal = document.getElementById('loginModal');
@@ -328,6 +590,8 @@ loginBtn.addEventListener('click', () => {
   } else {
     alert('Invalid PIN');
   }
+  document.getElementById('sortSelect').value = 'none';
+  document.getElementById('eventFilter').value = 'all';
 });
 
       logoutBtn.addEventListener('click', () => {
@@ -340,18 +604,56 @@ loginBtn.addEventListener('click', () => {
       function hideModal() { modal.classList.add('hidden'); }
       closeModalBtn.addEventListener('click', hideModal);
 
-      function openEditor(id) {
-        eventForm.reset(); detailsView.innerHTML = '';
-        modalTitle.textContent = id ? 'Edit Event' : 'New Event';
-        modalActions.classList.remove('hidden'); eventForm.classList.remove('hidden');
-        if (id) {
-          const ev = events.find(e => e.id == id);
-          Object.keys(ev).forEach(k => {
-            if (eventForm.elements[k]) eventForm.elements[k].value = ev[k];
-          });
-        }
-        showModal();
+   function openEditor(id) {
+  eventForm.reset(); 
+  detailsView.innerHTML = '';
+  modalTitle.textContent = id ? 'Edit Event' : 'New Event';
+  modalActions.classList.remove('hidden'); 
+  eventForm.classList.remove('hidden');
+
+  if (id) {
+    const ev = events.find(e => e.id == id);
+
+    // ✅ Set the hidden ID field so it can be reused when saving
+    eventForm.elements['id'].value = ev.id;
+
+    // Fill in all existing form fields except eventName (handled separately)
+    Object.keys(ev).forEach(k => {
+      if (eventForm.elements[k] && k !== "eventName") {
+        eventForm.elements[k].value = ev[k];
       }
+    });
+
+    // Handle custom dropdown logic for event name
+    const predefinedOptions = [
+      "House Warming",
+      "Half Saree Function",
+      "Haldi",
+      "Sweet Sixteen Party",
+      "Marriage Mandap & Anniversary",
+      "Graduation Party"
+    ];
+
+    if (predefinedOptions.includes(ev.eventName)) {
+      eventTypeDropdown.value = ev.eventName;
+      customEventName.classList.add('hidden');
+      customEventName.value = '';
+    } else {
+      eventTypeDropdown.value = 'custom';
+      customEventName.classList.remove('hidden');
+      customEventName.value = ev.eventName;
+    }
+  } else {
+    // New event: clear ID
+    eventForm.elements['id'].value = '';
+    eventTypeDropdown.value = '';
+    customEventName.classList.add('hidden');
+    customEventName.value = '';
+  }
+
+  showModal();
+}
+
       function viewDetails(id) {
   eventForm.classList.add('hidden');
   detailsView.innerHTML = '';
@@ -375,8 +677,12 @@ loginBtn.addEventListener('click', () => {
 
   fields.forEach(({ label, key }) => {
     const value = ev[key]
-      ? (key.includes("date") ? new Date(ev[key]).toLocaleString() : ev[key])
-      : "—";
+  ? (
+      key.includes("date") || key.toLowerCase().includes("created")
+        ? new Date(ev[key]).toLocaleString()
+        : ev[key]
+    )
+  : "—";
 
     const p = document.createElement("div");
     p.className = "flex justify-between items-center border-b py-2 text-sm text-gray-700";
@@ -388,11 +694,39 @@ loginBtn.addEventListener('click', () => {
   showModal();
 }
 
-      function deleteEvent(id) {
-        if (confirm('Delete this event?')) {
-          db.child(id).remove();
-        }
-      }
+  function deleteEvent(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return alert("Event not found");
+
+  if (confirm('Delete this event?')) {
+    // Send email BEFORE removing the event
+    emailjs.send("service_ihr1f1u", "template_ikihifw", {
+      heading: "❌ Event Cancelled",
+      to_name: ev.customerName || "Guest",
+      to_email: "eventplanner991@gmail.com",
+      event_name: ev.eventName || "",
+      customer_name: ev.customerName || "",
+      phone: ev.phone || "",
+      venue: ev.venue || "",
+      status: ev.status || "",
+      event_date: new Date(ev.dateTime).toLocaleString() || "",
+      total_cost: parseFloat(ev.totalCost || 0).toFixed(2),
+      paid: parseFloat(ev.paid || 0).toFixed(2),
+      balance: (parseFloat(ev.totalCost || 0) - parseFloat(ev.paid || 0)).toFixed(2)
+    });
+
+    // Now delete from Firebase
+    db.child(id).remove().then(() => {
+      events = events.filter(e => e.id !== id);  // Update local state
+      render();  // Re-render UI
+    });
+  }
+}
+
+
+
+        
+      
       window.openEditor = openEditor;
       window.viewDetails = viewDetails;
       window.deleteEvent = deleteEvent;
@@ -406,6 +740,38 @@ loginBtn.addEventListener('click', () => {
         snapshot.forEach(child => {
           events.push({ id: child.key, ...child.val() });
         });
+        const now = new Date();
+const upcomingEvents = events.filter(ev => {
+  const eventDate = new Date(ev.dateTime);
+  const diffHours = (eventDate - now) / (1000 * 60 * 60);
+  return diffHours > 0 && diffHours <= 48;
+});
+
+//let headingText = "New Event Created"; // default
+//if (ev.status === "Cancelled") headingText = "Event Cancelled";
+//else if (!isNew) headingText = "Event Updated";
+//else if (isUpcoming) headingText = "Upcoming Event Reminder";
+
+
+if (trigger === "new") headingText = "🆕 New Event Scheduled";
+else if (trigger === "update") headingText = "✏️ Event Updated";
+else if (trigger === "delete") headingText = "❌ Event Cancelled";
+else if (trigger === "reminder") headingText = "⏰ Upcoming Event Reminder";
+
+emailjs.send("service_ihr1f1u", "template_ikihifw", {
+  heading: headingText,  // e.g., "New Event Created", "Event Updated", etc.
+  event_name: ev.eventName,
+  customer_name: ev.customerName,
+  phone: ev.phone,
+  venue: ev.venue,
+  status: ev.status,
+  event_date: new Date(ev.dateTime).toLocaleString(),
+  total_cost: ev.totalCost,
+  paid: ev.paid,
+  balance: ev.balance
+});
+
+
         document.getElementById('exportCsvBtn').addEventListener('click', () => {
   if (events.length === 0) {
     alert("No events to export.");
@@ -446,30 +812,62 @@ loginBtn.addEventListener('click', () => {
         render();
       });
 
-      saveBtn.addEventListener('click', e => {
-        e.preventDefault();
-        if (!loggedIn) return;
-        if (eventForm.classList.contains('hidden')) return;
-        const formData = new FormData(eventForm);
-let data = Object.fromEntries(formData);
-data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : eventTypeDropdown.value;
-        const isNew = !data.id;
-        data.id = data.id ? data.id : db.push().key;
-        data.createdBy = currentRole;
-        data.totalCost = parseFloat(data.totalCost) || 0;
-        data.paid = parseFloat(data.paid) || 0;
-        data.balance = data.totalCost - data.paid;
-        
-        if (isNew) {
-          data.createdAt = new Date().toISOString();
-          }
+      saveBtn.addEventListener('click', async (e) => {
+  e.preventDefault();
+  if (!loggedIn || eventForm.classList.contains('hidden')) return;
 
-        db.child(data.id).set(data);
-        hideModal();
-      });
+  const formData = new FormData(eventForm);
+  let data = Object.fromEntries(formData);
+
+  // Handle custom or selected event name
+  data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : eventTypeDropdown.value;
+
+  const isNew = !data.id || data.id.trim() === '';
+  
+  // If new, create a unique ID
+  if (isNew) {
+    data.id = db.push().key;
+    data.createdAt = new Date().toISOString();
+  }
+
+  data.createdBy = currentRole;
+  data.totalCost = parseFloat(data.totalCost) || 0;
+  data.paid = parseFloat(data.paid) || 0;
+  data.balance = data.totalCost - data.paid;
+
+  // ✅ Store under events/{id}
+  await db.child(data.id).set(data);
+  // 🔁 Add to Google Calendar automatically
+if (gapiLoaded && gapi.auth2.getAuthInstance().isSignedIn.get()) {
+  addToGoogleCalendar(data);
+}
+ // Now safe and direct
+
+
+
+  // ✅ Send Email
+  emailjs.send("service_ihr1f1u", "template_ikihifw", {
+    heading: isNew ? "🆕 New Event Scheduled" : "✏️ Event Updated",
+    to_name: data.customerName || "Guest",
+    to_email: "eventplanner991@gmail.com",
+    event_name: data.eventName || "",
+    customer_name: data.customerName || "",
+    phone: data.phone || "",
+    venue: data.venue || "",
+    status: data.status || "",
+    event_date: new Date(data.dateTime).toLocaleString() || "",
+    total_cost: data.totalCost.toFixed(2),
+    paid: data.paid.toFixed(2),
+    balance: data.balance.toFixed(2)
+  });
+
+  hideModal();
+  render();
+});
+
 
       // Filters & rendering
-      const filterOptions = ['All','Scheduled','Ongoing','Completed','Cancelled','Most Recent'];
+      const filterOptions = ['All','Scheduled','Ongoing','Completed','Cancelled'];
       const statusColors = {
         Scheduled: { bg:'bg-blue-100', text:'text-blue-800', border:'border-blue-500' },
         Ongoing:   { bg:'bg-yellow-100', text:'text-yellow-800', border:'border-yellow-500' },
@@ -489,21 +887,54 @@ data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : 
         });
       }
 
-      function getFiltered() {
-        const term = searchInput.value.trim().toLowerCase();
-        let list = events.filter(e => {
-          if (['Scheduled','Ongoing','Completed','Cancelled'].includes(activeFilter) && e.status !== activeFilter) return false;
-          if (term && !((e.customerName||'').toLowerCase().includes(term) || (e.phone||'').includes(term))) return false;
-          return true;
-        });
-        if (activeFilter === 'Most Recent') {
-  list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-} else {
-  list.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+function getFiltered() {
+  const term = searchInput.value.trim().toLowerCase();
+  const sortOrder = document.getElementById('sortSelect')?.value || 'none';
+  const selectedEvent = document.getElementById('eventFilter')?.value || 'all';
+
+  let list = events.filter(e => {
+    const matchStatus = ['Scheduled', 'Ongoing', 'Completed', 'Cancelled'].includes(activeFilter)
+      ? e.status === activeFilter : true;
+
+    const matchSearch = !term || (e.customerName || '').toLowerCase().includes(term) || (e.phone || '').includes(term);
+
+    const matchEvent = selectedEvent === 'all' || (
+      selectedEvent === 'Other'
+        ? !["House Warming", "Half Saree Function", "Haldi", "Sweet Sixteen Party", "Marriage Mandap & Anniversary", "Graduation Party"].includes(e.eventName)
+        : e.eventName === selectedEvent
+    );
+
+    return matchStatus && matchSearch && matchEvent;
+  });
+
+  // Revenue filter
+  if (activeRevenueFilter === 'Paid') {
+    list = list.filter(e => parseFloat(e.paid || 0) > 0);
+  } else if (activeRevenueFilter === 'Unpaid') {
+    list = list.filter(e => (parseFloat(e.totalCost || 0) - parseFloat(e.paid || 0)) > 0);
+  }
+
+  // Sorting logic
+  list.sort((a, b) => {
+    if (sortOrder === 'latest') {
+      const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+      const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+      return dateB - dateA;
+    } else if (sortOrder === 'oldest') {
+      const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+      const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+      return dateA - dateB;
+    } else {
+      const dateA = a.dateTime ? new Date(a.dateTime) : new Date(0);
+      const dateB = b.dateTime ? new Date(b.dateTime) : new Date(0);
+      return dateA - dateB;
+    }
+  });
+
+  return list;
 }
 
-        return list;
-      }
+
 
      function renderStats() {
   const counts = { Scheduled: 0, Ongoing: 0, Completed: 0, Cancelled: 0 };
@@ -543,13 +974,13 @@ data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : 
       <div class="text-sm text-gray-600">Cancelled</div>
       <div class="text-xl font-semibold">${counts.Cancelled}</div>
     </div>
-    <div onclick="setFilterFromCard('Paid')" class="p-4 bg-teal-50 rounded-lg border-2 border-teal-200 cursor-pointer">
+    <div onclick="setFilterFromCard('Paid')" class="p-4 stat-card bg-teal-50 rounded-lg border-2 border-teal-200 cursor-pointer">
       <div class="text-teal-600 text-xl mb-2">💲</div>
       <div class="text-sm text-gray-600">Total Earned</div>
       <div class="text-xl font-semibold">$${totalEarned.toFixed(2)}</div>
     </div>
-    <div onclick="setFilterFromCard('Unpaid')" class="p-4 bg-pink-50 rounded-lg border-2 border-pink-200 cursor-pointer">
-      <div class="text-pink-600 text-xl mb-2">💰</div>
+   <div onclick="setFilterFromCard('Unpaid')" class="p-4 stat-card bg-pink-50 rounded-lg border-2 border-pink-200 cursor-pointer">
+ <div class="text-pink-600 text-xl mb-2">💰</div>
       <div class="text-sm text-gray-600">Balance</div>
       <div class="text-xl font-semibold">$${totalBalance.toFixed(2)}</div>
     </div>
@@ -585,23 +1016,7 @@ function printInvoice() {
 }
 
 function renderRows() {
-  const searchTerm = searchInput.value.toLowerCase().trim();
-  const filtered = events.filter(event => {
-    const matchesSearch =
-      event.customerName.toLowerCase().includes(searchTerm) ||
-      event.phone.includes(searchTerm);
-
-    const isPaid = parseFloat(event.paid) > 0;
-    const isUnpaid = (parseFloat(event.totalCost) - parseFloat(event.paid)) > 0;
-
-    const matchesFilter =
-      activeFilter === 'All' ||
-      (['Scheduled', 'Ongoing', 'Completed', 'Cancelled'].includes(activeFilter) && event.status === activeFilter) ||
-      (activeFilter === 'Paid' && isPaid) ||
-      (activeFilter === 'Unpaid' && isUnpaid);
-
-    return matchesFilter && matchesSearch;
-  });
+  const filtered = getFiltered(); // 🔧 Now it uses filtering logic!
 
   eventsBody.innerHTML = filtered.map(event => {
     const isAdmin = currentRole === 'admin';
@@ -609,22 +1024,41 @@ function renderRows() {
 
     return `
       <tr class="hover:bg-gray-50">
-        <td class="px-6 py-4">${event.eventName}</td>
+        <td class="px-6 py-4 font-semibold ${
+  event.status === 'Scheduled' ? 'text-blue-800' :
+  event.status === 'Ongoing' ? 'text-yellow-800' :
+  event.status === 'Completed' ? 'text-green-800' :
+  'text-red-800'
+}">
+  <button onclick="viewDetails('${event.id}')" class="text-indigo-700 hover:underline focus:outline-none">
+    ${event.eventName}
+  </button>
+</td>
         <td class="px-6 py-4">${event.customerName}</td>
         <td class="px-6 py-4">${event.phone}</td>
-        <td class="px-6 py-4">${new Date(event.dateTime).toLocaleString()}</td>
+        <td class="px-6 py-4">${new Date(event.dateTime).toLocaleString('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true
+}).replace(',', ' ·')}</td>
         <td class="px-6 py-4">
-          <span class="px-3 py-1 rounded-full text-sm ${
-            event.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
-            event.status === 'Ongoing' ? 'bg-yellow-100 text-yellow-800' :
-            event.status === 'Completed' ? 'bg-green-100 text-green-800' :
-            'bg-red-100 text-red-800'
-          }">${event.status}</span>
+          <span class="px-4 py-1 text-sm font-medium border-2 rounded ${
+  event.status === 'Scheduled' ? 'bg-blue-50 text-blue-700 border-blue-400' :
+  event.status === 'Ongoing' ? 'bg-yellow-50 text-yellow-700 border-yellow-400' :
+  event.status === 'Completed' ? 'bg-green-50 text-green-700 border-green-400' :
+  'bg-red-50 text-red-700 border-red-400'
+}">${event.status}</span>
         </td>
         <td class="px-6 py-4">${event.createdBy || 'user'}</td>
         <td class="px-6 py-4 text-right">$${parseFloat(event.totalCost).toFixed(2)}</td>
         <td class="px-6 py-4 text-right">$${parseFloat(event.paid).toFixed(2)}</td>
-        <td class="px-6 py-4 text-right">$${(event.totalCost - event.paid).toFixed(2)}</td>
+       <td class="px-6 py-4 text-right font-medium ${
+  (event.totalCost - event.paid) > 0 ? 'text-red-600' : 'text-gray-900'
+}">$${(event.totalCost - event.paid).toFixed(2)}</td>
+
         <td class="px-6 py-4 text-right space-x-2">
           ${
             isAdmin || isOwner
@@ -641,6 +1075,7 @@ function renderRows() {
 
   eventCount.textContent = filtered.length;
 
+
   const eventCards = document.getElementById('eventCards');
   eventCards.innerHTML = filtered.map(event => {
     const isAdmin = currentRole === 'admin';
@@ -649,15 +1084,26 @@ function renderRows() {
     return `
       <div class="bg-white shadow rounded-lg p-4">
         <div class="flex justify-between items-center">
-          <div class="text-lg font-semibold">${event.eventName}</div>
-          <span class="text-sm px-2 py-1 rounded-full ${
-            event.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
-            event.status === 'Ongoing' ? 'bg-yellow-100 text-yellow-800' :
-            event.status === 'Completed' ? 'bg-green-100 text-green-800' :
-            'bg-red-100 text-red-800'
-          }">${event.status}</span>
+<div class="text-lg font-semibold text-indigo-700 hover:underline cursor-pointer" onclick="viewDetails('${event.id}')">
+  ${event.eventName}
+</div>
+          <span class="px-4 py-1 text-sm font-medium border-2 rounded ${
+  event.status === 'Scheduled' ? 'bg-blue-50 text-blue-700 border-blue-400' :
+  event.status === 'Ongoing' ? 'bg-yellow-50 text-yellow-700 border-yellow-400' :
+  event.status === 'Completed' ? 'bg-green-50 text-green-700 border-green-400' :
+  'bg-red-50 text-red-700 border-red-400'
+}">${event.status}</span>
         </div>
-        <div class="text-sm text-gray-600 mt-2">${new Date(event.dateTime).toLocaleString()}</div>
+        <div class="text-sm text-gray-600 mt-2">${new Date(event.dateTime).toLocaleString('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true
+}).replace(',', ' ·')
+
+}</div>
         <div class="text-sm mt-2"><strong>Customer:</strong> ${event.customerName}</div>
         <div class="text-sm"><strong>Phone:</strong> ${event.phone}</div>
         <div class="text-sm"><strong>Total:</strong> $${parseFloat(event.totalCost).toFixed(2)}</div>
@@ -679,21 +1125,51 @@ function renderRows() {
   }).join('');
 }
 
+function renderRevenueChart() {
+  const monthlyRevenue = {};
+  events.forEach(event => {
+    if (event.status !== 'Cancelled') {
+      const date = new Date(event.dateTime);
+      const month = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+      if (!monthlyRevenue[month]) monthlyRevenue[month] = 0;
+      monthlyRevenue[month] += parseFloat(event.paid);
+    }
+  });
 
-      
+  const ctx = document.getElementById("revenueChart").getContext("2d");
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(monthlyRevenue),
+      datasets: [{
+        label: 'Monthly Revenue ($)',
+        data: Object.values(monthlyRevenue),
+        backgroundColor: '#4F46E5'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
       function downloadICS(eventId) {
   const ev = events.find(e => e.id === eventId);
   if (!ev) return alert("Event not found");
 
   const start = new Date(ev.dateTime);
-  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // Default 2-hour duration
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2-hour default duration
 
-  const formatDate = (d) =>
-    d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const formatDate = (d) => {
+    return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  };
 
   const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//EventPlannerApp//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
 BEGIN:VEVENT
 UID:${eventId}
 DTSTAMP:${formatDate(new Date())}
@@ -702,27 +1178,46 @@ DTEND:${formatDate(end)}
 SUMMARY:${ev.eventName}
 DESCRIPTION:Customer: ${ev.customerName}\\nPhone: ${ev.phone}\\nAddress: ${ev.address}\\nStatus: ${ev.status}
 LOCATION:${ev.venue}
+ORGANIZER;CN=Event Planner:mailto:eventplanner991@gmail.com
+STATUS:CONFIRMED
+SEQUENCE:0
 END:VEVENT
 END:VCALENDAR`;
 
   const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+
+  // Force download via anchor (mobile compatible)
   const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
+  link.href = url;
   link.download = `${ev.eventName}.ics`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
 
+
 function setFilterFromCard(filter) {
+  // Reset revenue filter if "All", "Scheduled", etc. are clicked
+  if (['Scheduled', 'Ongoing', 'Completed', 'Cancelled', 'All'].includes(filter)) {
     activeFilter = filter;
-    render();
+    activeRevenueFilter = null; // ✅ reset revenue filter!
+  } 
+  else if (filter === 'Paid') {
+    activeFilter = 'All';
+    activeRevenueFilter = 'Paid';
+  } 
+  else if (filter === 'Unpaid') {
+    activeFilter = 'All';
+    activeRevenueFilter = 'Unpaid';
   }
+
+  render();
+}
+
+
   
-   function setFilterFromCard(filter) {
-    activeFilter = filter;
-    render();
-  }
+ 
   window.setFilterFromCard = setFilterFromCard;
   
   
@@ -731,9 +1226,14 @@ function setFilterFromCard(filter) {
         renderStats();
         renderFilters();
         renderRows();
+        //renderRevenueChart();
+
       }
 
       searchInput.addEventListener('input', render);
+      document.getElementById('sortSelect').addEventListener('change', render);
+document.getElementById('eventFilter').addEventListener('change', render);
+
       
       document.getElementById('exportCsvBtn').addEventListener('click', () => {
   if (!events.length) return alert("No events to export.");
@@ -779,5 +1279,57 @@ function setFilterFromCard(filter) {
 
 
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+  emailjs.init("tMwPoa38QEavEGxTf");
+  
+
+</script>
+  <!-- Google API -->
+<script src="https://apis.google.com/js/api.js"></script>
+<script>
+  const CLIENT_ID = "697139383145-okm5cdl3bhkjm6mn12f6httv5g7mu9hi.apps.googleusercontent.com";
+  const SCOPES = "https://www.googleapis.com/auth/calendar.events";
+  
+function showToast(message, duration = 3000) {
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.classList.remove("hidden");
+  toast.classList.add("opacity-100");
+
+  setTimeout(() => {
+    toast.classList.add("opacity-0");
+    setTimeout(() => toast.classList.add("hidden"), 300);
+  }, duration);
+}
+let gapiLoaded = false;
+
+async function loadGoogleAPI() {
+  return new Promise(resolve => {
+    gapi.load("client:auth2", async () => {
+      await gapi.client.init({ clientId: CLIENT_ID, scope: SCOPES });
+      gapiLoaded = true;
+      resolve();
+    });
+  });
+}
+
+async function signInToGoogle() {
+  if (!gapiLoaded) await loadGoogleAPI();
+
+  try {
+    await gapi.auth2.getAuthInstance().signIn();
+    showToast("✅ Google Calendar Connected!");
+  } catch (err) {
+    alert("❌ Google sign-in blocked or canceled.");
+  }
+}
+
+document.getElementById("connectCalendarBtn").addEventListener("click", signInToGoogle);
+
+
+</script>
+
 </body>
 </html>
