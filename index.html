@@ -1,0 +1,1428 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Event Planner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+ <script src="https://unpkg.com/@heroicons/vue@2.0.13/dist/heroicons.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+ <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+   body {
+  font-family: 'Work Sans', sans-serif;
+}
+
+/* General Input/Select Styling */
+/* Form input/select inside modal form only */
+#eventForm input,
+#eventForm select {
+  border: 1px solid #CBD5E1;
+  height: calc(3rem * 1.005);
+}
+/* Filter bar styling (search, sort, filter dropdowns) */
+#searchInput,
+#sortSelect,
+#eventFilter {
+  height: 2.25rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+   border-radius: 0.375rem; /* ≈ 6px, matches Tailwind's rounded-md */
+  border: 1px solid #CBD5E1;
+}
+    .hidden { display: none !important; }  
+    #eventsTable { table-layout: auto; width: 100%; }
+    #eventsTable th, #eventsTable td {
+      padding: 1rem;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    
+     
+    #eventsTable td:first-child, #eventsTable th:first-child {
+      padding-left: 2rem;
+    }
+    #eventsTable th:nth-child(4), #eventsTable td:nth-child(4) {
+      width: 180px;
+    }
+    #eventsTable th:nth-child(5), #eventsTable td:nth-child(5) {
+      width: 140px;
+      text-align: center;
+    }
+
+/* Search input width */
+#searchInput {
+  width: 200px;
+  padding-left: 2.25rem !important;
+  background-color: #ffffff;
+  color: #1f2937; /* darker gray */
+  border: 1px solid #d1d5db;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+
+/* Dropdown widths */
+#sortSelect,
+#eventFilter {
+  width: 160px;
+  padding-right: 2.25rem !important; /* space for chevron */
+}
+
+/* Events Table */
+#eventsTable {
+  table-layout: auto;
+  width: 100%;
+}
+
+#eventsTable th,
+#eventsTable td {
+  padding: 1rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+#eventsTable td:first-child,
+#eventsTable th:first-child {
+  padding-left: 2rem;
+}
+
+#eventsTable th:nth-child(4),
+#eventsTable td:nth-child(4) {
+  width: 180px;
+}
+
+#eventsTable th:nth-child(5),
+#eventsTable td:nth-child(5) {
+  width: 140px;
+  text-align: center;
+}
+
+/* Filter Buttons */
+#filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+#filters button {
+  height: 2.25rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#filters button.active {
+  background: #4F46E5;
+  color: #fff;
+  border-color: #4F46E5;
+}
+
+/* Admin role badge */
+.admin-badge {
+  background-color: #f3e8ff;
+  color: #7c3aed;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+}
+
+/* Scrollbar styling */
+#filters::-webkit-scrollbar {
+  height: 6px;
+}
+#filters::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+}
+
+/* Responsive: Mobile Layout Fix */
+@media (max-width: 640px) {
+  .filter-container {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+
+  #searchInput,
+  #sortSelect,
+  #eventFilter {
+    width: 100% !important;
+    font-size: 1rem;
+  }
+
+  #filters button {
+    flex: 1 1 48%;
+    min-width: 130px;
+    text-align: center;
+  }
+
+  #eventsTable {
+    display: none;
+  }
+
+  #eventCards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  #stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .stat-card {
+    width: 100%;
+  }
+
+  .text-sm.text-gray-600,
+  .text-xl.font-semibold {
+    text-align: left !important;
+  }
+}
+
+/* Desktop layout: Inputs + Filters neatly side-by-side */
+@media (min-width: 641px) {
+  .filter-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .filter-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+  }
+}
+@media (max-width: 640px) {
+  .filter-container {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .filter-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  #searchInput,
+  #sortSelect,
+  #eventFilter {
+    width: 100% !important;
+    font-size: 1rem;
+  }
+
+  #filters {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  #filters button {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    width: 100%;
+    text-align: center;
+  }
+
+  .stat-card {
+    width: 100%;
+  }
+}
+@media (max-width: 640px) {
+  .filter-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .filter-inputs {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  #searchInput,
+  #sortSelect,
+  #eventFilter {
+    width: 100% !important;
+    font-size: 1rem;
+  }
+
+  #filters {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(48%, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  #filters button {
+    width: 100%;
+    padding: 0.6rem 1rem;
+    font-size: 0.95rem;
+    text-align: center;
+  }
+}
+#filters button:hover {
+  background-color: #e0e7ff;
+}@media (max-width: 640px) {
+  .filter-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .filter-inputs {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  #searchInput,
+  #sortSelect,
+  #eventFilter {
+    width: 100% !important;
+  }
+}
+@media (max-width: 640px) {
+  #stats {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem;
+  }
+
+  .stat-card {
+    width: 100% !important;
+  }
+}
+
+
+  </style>
+</head>
+<body class="bg-gray-50 p-6">
+  <!-- Login Modal -->
+  <div id="loginModal" class="fixed inset-0 flex items-center justify-center bg-white bg-opacity-100 z-50">
+  <div class="bg-white rounded-xl p-6 w-[90vw] max-w-sm shadow-xl border-2 border-indigo-200">
+    <h2 class="text-2xl font-bold mb-4 text-center text-indigo-700">🔐 Secure Access</h2>
+    <input id="pinInput" type="password" maxlength="4" placeholder="····"
+      class="w-full bg-gray-50 rounded-md shadow-sm px-4 py-3 text-center text-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
+    <button id="loginBtn" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 transition text-white px-4 py-2 rounded-md font-semibold shadow">
+      Login
+    </button>
+  </div>
+</div>
+
+
+<header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+  <div>
+    <h1 class="text-2xl font-extrabold">Event Planner</h1>
+    <p id="roleBadge" class="text-gray-500 mt-1 text-sm"></p>
+    <p class="text-gray-500">Organize and keep track of all your events</p>
+  </div>
+  <div class="flex gap-2 w-full sm:w-auto justify-end">
+    <button id="connectCalendarBtn" class="bg-black text-white px-4 py-2 rounded">
+  Connect to Calendar
+</button>
+    <button id="addEventBtn" class="bg-indigo-600 text-white px-4 py-2 rounded w-full sm:w-auto">+ Add Event</button>
+    
+
+    <button id="exportCsvBtn"class="bg-green-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-green-700 transition">
+  Export
+</button>
+ <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded w-full sm:w-auto">Logout</button>
+   
+  </div>
+</header>
+
+
+  <section id="stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4 mb-6"></section>
+
+<div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-4 mb-6">
+  <h2 class="text-xl font-semibold leading-[2.5rem] h-10">Events</h2>
+  
+  <div class="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full sm:w-auto">
+    <div class="flex flex-wrap gap-2 items-center">
+      <!-- Search -->
+<div class="relative w-full sm:w-[200px]">
+  <input id="searchInput" type="text" placeholder="Search by customer or phone"
+    class="pl-10 pr-3 py-2 h-10 border rounded shadow-sm w-full text-sm" />
+  <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+</div>
+
+
+<!-- Sort -->
+<div class="relative w-full sm:w-[160px]">
+  <select id="sortSelect"
+    class="appearance-none pl-3 pr-8 py-2 h-10 border rounded w-full text-sm text-gray-600">
+<option value="none">Sort by</option>
+  <option value="latest">New to Old</option>
+  <option value="oldest">Old to New</option>
+</select>
+  <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+</div>
+
+<!-- Filter by Event -->
+<div class="relative w-full sm:w-[160px]">
+  <select id="eventFilter"
+    class="appearance-none pl-3 pr-8 py-2 h-10 border rounded w-full text-sm text-gray-600">
+     <option value="all">Filter by Event</option>
+    <option>House Warming</option>
+    <option>Half Saree Function</option>
+    <option>Haldi</option>
+    <option>Sweet Sixteen Party</option>
+    <option>Marriage Mandap & Anniversary</option>
+    <option>Graduation Party</option>
+    <option>Other</option>
+  </select>
+  <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+</div>
+
+    <div id="filters" class="flex flex-wrap gap-2 mt-2 sm:mt-0 sm:ml-4">
+      <!-- Filter buttons injected by JS -->
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 bg-green-600 text-white px-4 py-3 rounded-md shadow-lg hidden transition-opacity duration-300 z-50">
+  ✅ Event added to your Google Calendar!
+</div>
+
+
+
+  </div>
+</div>
+
+  <div class="overflow-x-auto bg-white rounded-xl shadow-card border border-gray-300">
+    <table id="eventsTable" class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Event</th>
+    <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Customer</th>
+    <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Phone</th>
+    <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Date</th>
+    <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Status</th>
+    <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Created By</th>
+    <th class="px-6 py-3 text-right text-sm font-medium text-gray-600">Total</th>
+    <th class="px-6 py-3 text-right text-sm font-medium text-gray-600">Paid</th>
+    <th class="px-6 py-3 text-right text-sm font-medium text-gray-600">Balance</th>
+    <th class="px-6 py-3 text-right text-sm font-medium text-gray-600">Actions</th>
+    </tr>
+      </thead>
+      <tbody id="eventsBody" class="divide-y divide-gray-100"></tbody>
+    </table>
+    <div class="px-6 py-4 border-t border-gray-100 text-sm text-gray-500">
+      Showing <span id="eventCount" class="font-semibold text-gray-900">0</span> events
+    </div>
+  </div>
+  <!-- Mobile Cards View -->
+<div id="eventCards" class="sm:hidden grid gap-4 mt-4"></div>
+
+
+  <!-- Modal -->
+<!-- Modal -->
+<div id="modal" class="fixed inset-0 hidden bg-black bg-opacity-50 z-50 p-4 overflow-y-auto">
+  <div class="min-h-screen flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 w-[90vw] sm:w-full max-w-2xl shadow-lg">
+
+      <!-- Modal Header -->
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="modalTitle" class="text-xl font-semibold text-gray-800">📋 Event Details</h2>
+        <div class="flex items-center gap-3">
+          <button onclick="printInvoice()" class="bg-blue-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-blue-700 transition">
+            🖨️ Print
+          </button>
+          <button id="closeModalBtn" class="text-gray-500 hover:text-red-500 text-xl font-bold h-10 w-10 flex items-center justify-center">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Details View -->
+      <div id="detailsView" class="space-y-2 text-sm text-gray-700 px-1 max-h-[70vh] overflow-y-auto"></div>
+
+      <!-- Modal Form -->
+      <form id="eventForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+        <input type="hidden" name="id" />
+        <div>
+          <label class="block text-sm font-medium">Event Name</label>
+          <select id="eventTypeDropdown" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3">
+            <option value="">-- Select Event Type --</option>
+            <option>House Warming</option>
+            <option>Half Saree Function</option>
+            <option>Haldi</option>
+            <option>Sweet Sixteen Party</option>
+            <option>Marriage Mandap & Anniversary</option>
+            <option>Graduation Party</option>
+            <option value="custom">Other (Enter Custom)</option>
+          </select>
+          <input name="eventName" id="customEventName" class="border mt-2 block w-full bg-gray-50 rounded-md shadow-sm px-3 hidden" placeholder="Enter custom event name" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Customer</label>
+          <input name="customerName" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter customer name" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Phone</label>
+          <input name="phone" type="tel" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter phone number" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Address</label>
+          <input name="address" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter address" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Venue</label>
+          <input name="venue" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" placeholder="Enter venue" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Status</label>
+          <select name="status" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3">
+            <option>Scheduled</option>
+            <option>Ongoing</option>
+            <option>Completed</option>
+            <option>Cancelled</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Date & Time</label>
+          <input name="dateTime" type="datetime-local" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Total Cost ($)</label>
+          <input name="totalCost" type="number" step="0.01" placeholder="0.00" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Amount Paid ($)</label>
+          <input name="paid" type="number" step="0.01" placeholder="0.00" class="border mt-1 block w-full bg-gray-50 rounded-md shadow-sm px-3" />
+        </div>
+      </form>
+
+      <!-- Modal Actions -->
+      <div id="modalActions" class="flex justify-end space-x-3 mt-4 hidden">
+        <button id="cancelBtn" class="px-4 py-2 border rounded-md text-gray-700">Reset</button>
+        <button id="saveBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-md">Save</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+  <script>
+    // Firebase config and init
+    const firebaseConfig = {
+      apiKey: "AIzaSyBZwbmHHqmc9iOhTMGUVM8Hgd1EGC7OJ8Q",
+      authDomain: "events-ed966.firebaseapp.com",
+      databaseURL: "https://events-ed966-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "events-ed966",
+      storageBucket: "events-ed966.appspot.com",
+      messagingSenderId: "26715005266",
+      appId: "1:26715005266:web:fcccdab09d89bf9b7ada8b",
+      measurementId: "G-65Z0JP7Q42"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("events");
+
+    document.addEventListener('DOMContentLoaded', () => {
+      let events = [];
+      let activeFilter = 'All';
+      let loggedIn = false;
+      let activeRevenueFilter = null;
+
+
+      // Elements
+      const loginModal = document.getElementById('loginModal');
+      const pinInput = document.getElementById('pinInput');
+      const loginBtn = document.getElementById('loginBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+      const addEventBtn = document.getElementById('addEventBtn');
+      const stats = document.getElementById('stats');
+      const filtersDiv = document.getElementById('filters');
+      const searchInput = document.getElementById('searchInput');
+      const eventsBody = document.getElementById('eventsBody');
+      const modal = document.getElementById('modal');
+      const closeModalBtn = document.getElementById('closeModalBtn');
+      const detailsView = document.getElementById('detailsView');
+      const eventForm = document.getElementById('eventForm');
+      const modalActions = document.getElementById('modalActions');
+      const saveBtn = document.getElementById('saveBtn');
+      const eventTypeDropdown = document.getElementById('eventTypeDropdown');
+      const customEventName = document.getElementById('customEventName');
+
+eventTypeDropdown.addEventListener('change', () => {
+  if (eventTypeDropdown.value === 'custom') {
+    customEventName.classList.remove('hidden');
+  } else {
+    customEventName.classList.add('hidden');
+  }
+});
+
+
+      // Auth
+      function showLogin() { loginModal.classList.remove('hidden'); }
+      function hideLogin() { loginModal.classList.add('hidden'); }
+      const roles = { '0000': 'user', '1234': 'admin' };
+let currentRole = null;
+
+loginBtn.addEventListener('click', () => {
+  const pin = pinInput.value;
+  if (roles[pin]) {
+    currentRole = roles[pin];
+    loggedIn = true;
+    hideLogin();
+    document.getElementById("roleBadge").innerHTML = `Logged in as: <span class="admin-badge">${currentRole.toUpperCase()}</span>`;
+    render();
+  } else {
+    alert('Invalid PIN');
+  }
+  document.getElementById('sortSelect').value = 'none';
+  document.getElementById('eventFilter').value = 'all';
+});
+
+      logoutBtn.addEventListener('click', () => {
+        loggedIn = false; showLogin();
+      });
+      showLogin();
+
+      // Modal handlers
+      function showModal() { modal.classList.remove('hidden'); }
+      function hideModal() { modal.classList.add('hidden'); }
+      closeModalBtn.addEventListener('click', hideModal);
+
+   function openEditor(id) {
+  eventForm.reset(); 
+  detailsView.innerHTML = '';
+  modalTitle.textContent = id ? 'Edit Event' : 'New Event';
+  modalActions.classList.remove('hidden'); 
+  eventForm.classList.remove('hidden');
+
+  if (id) {
+    const ev = events.find(e => e.id == id);
+
+    // ✅ Set the hidden ID field so it can be reused when saving
+    eventForm.elements['id'].value = ev.id;
+
+    // Fill in all existing form fields except eventName (handled separately)
+    Object.keys(ev).forEach(k => {
+      if (eventForm.elements[k] && k !== "eventName") {
+        eventForm.elements[k].value = ev[k];
+      }
+    });
+
+    // Handle custom dropdown logic for event name
+    const predefinedOptions = [
+      "House Warming",
+      "Half Saree Function",
+      "Haldi",
+      "Sweet Sixteen Party",
+      "Marriage Mandap & Anniversary",
+      "Graduation Party"
+    ];
+
+    if (predefinedOptions.includes(ev.eventName)) {
+      eventTypeDropdown.value = ev.eventName;
+      customEventName.classList.add('hidden');
+      customEventName.value = '';
+    } else {
+      eventTypeDropdown.value = 'custom';
+      customEventName.classList.remove('hidden');
+      customEventName.value = ev.eventName;
+    }
+  } else {
+    // New event: clear ID
+    eventForm.elements['id'].value = '';
+    eventTypeDropdown.value = '';
+    customEventName.classList.add('hidden');
+    customEventName.value = '';
+  }
+
+  showModal();
+}
+
+function viewDetails(id) {
+  eventForm.classList.add('hidden');
+  detailsView.innerHTML = '';
+  modalTitle.textContent = '📋 Event Details';
+
+  const ev = events.find(e => e.id == id);
+
+  // Update modal header with Print + Sync buttons
+  const modalHeader = document.querySelector(".flex.justify-between.items-center.mb-4");
+  modalHeader.innerHTML = `
+    <h2 id="modalTitle" class="text-xl font-semibold text-gray-800">📋 Event Details</h2>
+    <div class="flex items-center gap-3">
+      <button onclick="printInvoice()" class="bg-blue-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-blue-700 transition">
+        🖨️ Print
+      </button>
+      <button id="syncCalendarBtn" class="bg-purple-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-purple-700 transition">
+        🔄 Sync to Calendar
+      </button>
+      <button id="closeModalBtn" class="text-gray-500 hover:text-red-500 text-xl font-bold h-10 w-10 flex items-center justify-center">
+        ✕
+      </button>
+    </div>
+  `;
+
+  // Close button logic
+  document.getElementById("closeModalBtn").addEventListener("click", hideModal);
+
+  // Sync to Calendar logic
+  document.getElementById("syncCalendarBtn").addEventListener("click", async () => {
+    if (!accessToken) {
+      alert("Please connect Google Calendar first.");
+      return;
+    }
+
+    const syncBtn = document.getElementById("syncCalendarBtn");
+    syncBtn.disabled = true;
+    syncBtn.textContent = "⏳ Syncing...";
+    try {
+      await addToGoogleCalendar(ev);
+      syncBtn.textContent = "✅ Synced!";
+    } catch (err) {
+      console.error("Google Calendar Sync Failed:", err);
+      syncBtn.textContent = "❌ Failed";
+    } finally {
+      setTimeout(() => {
+        syncBtn.disabled = false;
+        syncBtn.textContent = "🔄 Sync to Calendar";
+      }, 2000);
+    }
+  });
+
+  // Display event details
+  const fields = [
+    { label: "📝 Event Name", key: "eventName" },
+    { label: "👤 Customer", key: "customerName" },
+    { label: "📞 Phone", key: "phone" },
+    { label: "🏠 Address", key: "address" },
+    { label: "📍 Venue", key: "venue" },
+    { label: "📌 Status", key: "status" },
+    { label: "📅 Date & Time", key: "dateTime" },
+    { label: "💰 Total Cost", key: "totalCost" },
+    { label: "✅ Paid", key: "paid" },
+    { label: "⏳ Balance", key: "balance" },
+    { label: "🕒 Created At", key: "createdAt" }
+  ];
+
+  fields.forEach(({ label, key }) => {
+    const value = ev[key]
+      ? (
+        key.includes("date") || key.toLowerCase().includes("created")
+          ? new Date(ev[key]).toLocaleString()
+          : ev[key]
+      )
+      : "—";
+
+    const p = document.createElement("div");
+    p.className = "flex justify-between items-center border-b py-2 text-sm text-gray-700";
+    p.innerHTML = `<span class="font-medium">${label}:</span> <span class="text-right">${value}</span>`;
+    detailsView.appendChild(p);
+  });
+
+  modalActions.classList.add('hidden');
+  showModal();
+}
+
+
+  function deleteEvent(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return alert("Event not found");
+
+  if (confirm('Delete this event?')) {
+    // Send email BEFORE removing the event
+    emailjs.send("service_ihr1f1u", "template_ikihifw", {
+      heading: "❌ Event Cancelled",
+      to_name: ev.customerName || "Guest",
+      to_email: "eventplanner991@gmail.com",
+      event_name: ev.eventName || "",
+      customer_name: ev.customerName || "",
+      phone: ev.phone || "",
+      venue: ev.venue || "",
+      status: ev.status || "",
+      event_date: new Date(ev.dateTime).toLocaleString() || "",
+      total_cost: parseFloat(ev.totalCost || 0).toFixed(2),
+      paid: parseFloat(ev.paid || 0).toFixed(2),
+      balance: (parseFloat(ev.totalCost || 0) - parseFloat(ev.paid || 0)).toFixed(2)
+    });
+
+    // Now delete from Firebase
+    db.child(id).remove().then(() => {
+      events = events.filter(e => e.id !== id);  // Update local state
+      render();  // Re-render UI
+    });
+  }
+}
+
+
+
+        
+      
+      window.openEditor = openEditor;
+      window.viewDetails = viewDetails;
+      window.deleteEvent = deleteEvent;
+      window.downloadICS = downloadICS;
+
+      addEventBtn.addEventListener('click', () => openEditor(null));
+
+      // Firebase sync
+      db.on('value', snapshot => {
+        events = [];
+        snapshot.forEach(child => {
+          events.push({ id: child.key, ...child.val() });
+        });
+        const now = new Date();
+const upcomingEvents = events.filter(ev => {
+  const eventDate = new Date(ev.dateTime);
+  const diffHours = (eventDate - now) / (1000 * 60 * 60);
+  return diffHours > 0 && diffHours <= 48;
+});
+
+//let headingText = "New Event Created"; // default
+//if (ev.status === "Cancelled") headingText = "Event Cancelled";
+//else if (!isNew) headingText = "Event Updated";
+//else if (isUpcoming) headingText = "Upcoming Event Reminder";
+
+
+if (trigger === "new") headingText = "🆕 New Event Scheduled";
+else if (trigger === "update") headingText = "✏️ Event Updated";
+else if (trigger === "delete") headingText = "❌ Event Cancelled";
+else if (trigger === "reminder") headingText = "⏰ Upcoming Event Reminder";
+
+emailjs.send("service_ihr1f1u", "template_ikihifw", {
+  heading: headingText,  // e.g., "New Event Created", "Event Updated", etc.
+  event_name: ev.eventName,
+  customer_name: ev.customerName,
+  phone: ev.phone,
+  venue: ev.venue,
+  status: ev.status,
+  event_date: new Date(ev.dateTime).toLocaleString(),
+  total_cost: ev.totalCost,
+  paid: ev.paid,
+  balance: ev.balance
+});
+
+
+        document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  if (events.length === 0) {
+    alert("No events to export.");
+    return;
+  }
+
+  const headers = [
+    "Event Name", "Customer", "Phone", "Address", "Venue",
+    "Status", "Date & Time", "Total Cost", "Paid", "Balance"
+  ];
+
+  const rows = events.map(e => [
+    e.eventName || '',
+    e.customerName || '',
+    e.phone || '',
+    e.address || '',
+    e.venue || '',
+    e.status || '',
+    new Date(e.dateTime).toLocaleString(),
+    parseFloat(e.totalCost || 0).toFixed(2),
+    parseFloat(e.paid || 0).toFixed(2),
+    (parseFloat(e.totalCost || 0) - parseFloat(e.paid || 0)).toFixed(2)
+  ]);
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.setAttribute("href", URL.createObjectURL(blob));
+  link.setAttribute("download", "events.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+});
+
+        render();
+      });
+
+      saveBtn.addEventListener('click', async (e) => {
+  e.preventDefault();
+  if (!loggedIn || eventForm.classList.contains('hidden')) return;
+
+  const formData = new FormData(eventForm);
+  let data = Object.fromEntries(formData);
+
+  // Handle custom or selected event name
+  data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : eventTypeDropdown.value;
+
+  const isNew = !data.id || data.id.trim() === '';
+  
+  // If new, create a unique ID
+  if (isNew) {
+    data.id = db.push().key;
+    data.createdAt = new Date().toISOString();
+  }
+
+  data.createdBy = currentRole;
+  data.totalCost = parseFloat(data.totalCost) || 0;
+  data.paid = parseFloat(data.paid) || 0;
+  data.balance = data.totalCost - data.paid;
+
+  // ✅ Store under events/{id}
+  await db.child(data.id).set(data);
+  // 🔁 Add to Google Calendar automatically
+if (accessToken) {
+  addToGoogleCalendar(data);
+}
+
+
+ // Now safe and direct
+
+
+
+  // ✅ Send Email
+  emailjs.send("service_ihr1f1u", "template_ikihifw", {
+    heading: isNew ? "🆕 New Event Scheduled" : "✏️ Event Updated",
+    to_name: data.customerName || "Guest",
+    to_email: "eventplanner991@gmail.com",
+    event_name: data.eventName || "",
+    customer_name: data.customerName || "",
+    phone: data.phone || "",
+    venue: data.venue || "",
+    status: data.status || "",
+    event_date: new Date(data.dateTime).toLocaleString() || "",
+    total_cost: data.totalCost.toFixed(2),
+    paid: data.paid.toFixed(2),
+    balance: data.balance.toFixed(2)
+  });
+
+  hideModal();
+  render();
+});
+
+
+      // Filters & rendering
+      const filterOptions = ['All','Scheduled','Ongoing','Completed','Cancelled'];
+      const statusColors = {
+        Scheduled: { bg:'bg-blue-100', text:'text-blue-800', border:'border-blue-500' },
+        Ongoing:   { bg:'bg-yellow-100', text:'text-yellow-800', border:'border-yellow-500' },
+        Completed: { bg:'bg-green-100', text:'text-green-800', border:'border-green-500' },
+        Cancelled: { bg:'bg-red-100', text:'text-red-800', border:'border-red-500' }
+      };
+
+      function renderFilters() {
+        filtersDiv.innerHTML = '';
+        filterOptions.forEach(opt => {
+          const btn = document.createElement('button');
+          btn.textContent = opt;
+          btn.classList.add('px-3','py-1','border','rounded');
+          if (opt === activeFilter) btn.classList.add('active');
+          btn.addEventListener('click', () => { activeFilter = opt; render(); });
+          filtersDiv.appendChild(btn);
+        });
+      }
+
+function getFiltered() {
+  const term = searchInput.value.trim().toLowerCase();
+  const sortOrder = document.getElementById('sortSelect')?.value || 'none';
+  const selectedEvent = document.getElementById('eventFilter')?.value || 'all';
+
+  let list = events.filter(e => {
+    const matchStatus = ['Scheduled', 'Ongoing', 'Completed', 'Cancelled'].includes(activeFilter)
+      ? e.status === activeFilter : true;
+
+    const matchSearch = !term || (e.customerName || '').toLowerCase().includes(term) || (e.phone || '').includes(term);
+
+    const matchEvent = selectedEvent === 'all' || (
+      selectedEvent === 'Other'
+        ? !["House Warming", "Half Saree Function", "Haldi", "Sweet Sixteen Party", "Marriage Mandap & Anniversary", "Graduation Party"].includes(e.eventName)
+        : e.eventName === selectedEvent
+    );
+
+    return matchStatus && matchSearch && matchEvent;
+  });
+
+  // Revenue filter
+  if (activeRevenueFilter === 'Paid') {
+    list = list.filter(e => parseFloat(e.paid || 0) > 0);
+  } else if (activeRevenueFilter === 'Unpaid') {
+    list = list.filter(e => (parseFloat(e.totalCost || 0) - parseFloat(e.paid || 0)) > 0);
+  }
+
+  // Sorting logic
+  list.sort((a, b) => {
+    if (sortOrder === 'latest') {
+      const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+      const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+      return dateB - dateA;
+    } else if (sortOrder === 'oldest') {
+      const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+      const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+      return dateA - dateB;
+    } else {
+      const dateA = a.dateTime ? new Date(a.dateTime) : new Date(0);
+      const dateB = b.dateTime ? new Date(b.dateTime) : new Date(0);
+      return dateA - dateB;
+    }
+  });
+
+  return list;
+}
+
+
+
+     function renderStats() {
+  const counts = { Scheduled: 0, Ongoing: 0, Completed: 0, Cancelled: 0 };
+  let totalEarned = 0, totalBalance = 0;
+
+  events.forEach(event => {
+    counts[event.status]++;
+    if (event.status !== 'Cancelled') {
+      totalEarned += parseFloat(event.paid);
+      totalBalance += parseFloat(event.totalCost) - parseFloat(event.paid);
+    }
+  });
+
+  stats.innerHTML = `
+    <div onclick="setFilterFromCard('All')" class="p-4 stat-card bg-indigo-50 rounded-lg border-2 border-indigo-200 cursor-pointer">
+      <div class="text-indigo-600 text-xl mb-2">📦</div>
+      <div class="text-sm text-gray-600">All Events</div>
+      <div class="text-xl font-semibold">${events.length}</div>
+    </div>
+    <div onclick="setFilterFromCard('Scheduled')" class="p-4 stat-card bg-blue-50 rounded-lg border-2 border-blue-200 cursor-pointer">
+      <div class="text-blue-600 text-xl mb-2">📅</div>
+      <div class="text-sm text-gray-600">Scheduled</div>
+      <div class="text-xl font-semibold">${counts.Scheduled}</div>
+    </div>
+    <div onclick="setFilterFromCard('Ongoing')" class="p-4 stat-card bg-yellow-50 rounded-lg border-2 border-yellow-200 cursor-pointer">
+      <div class="text-yellow-600 text-xl mb-2">⏱️</div>
+      <div class="text-sm text-gray-600">Ongoing</div>
+      <div class="text-xl font-semibold">${counts.Ongoing}</div>
+    </div>
+    <div onclick="setFilterFromCard('Completed')" class="p-4 stat-card bg-green-50 rounded-lg border-2 border-green-200 cursor-pointer">
+      <div class="text-green-600 text-xl mb-2">✅</div>
+      <div class="text-sm text-gray-600">Completed</div>
+      <div class="text-xl font-semibold">${counts.Completed}</div>
+    </div>
+    <div onclick="setFilterFromCard('Cancelled')" class="p-4 stat-card bg-red-50 rounded-lg border-2 border-red-200 cursor-pointer">
+      <div class="text-red-600 text-xl mb-2">❌</div>
+      <div class="text-sm text-gray-600">Cancelled</div>
+      <div class="text-xl font-semibold">${counts.Cancelled}</div>
+    </div>
+    <div onclick="setFilterFromCard('Paid')" class="p-4 stat-card bg-teal-50 rounded-lg border-2 border-teal-200 cursor-pointer">
+      <div class="text-teal-600 text-xl mb-2">💲</div>
+      <div class="text-sm text-gray-600">Total Earned</div>
+      <div class="text-xl font-semibold">$${totalEarned.toFixed(2)}</div>
+    </div>
+   <div onclick="setFilterFromCard('Unpaid')" class="p-4 stat-card bg-pink-50 rounded-lg border-2 border-pink-200 cursor-pointer">
+ <div class="text-pink-600 text-xl mb-2">💰</div>
+      <div class="text-sm text-gray-600">Balance</div>
+      <div class="text-xl font-semibold">$${totalBalance.toFixed(2)}</div>
+    </div>
+  `;
+}
+function printInvoice() {
+  const printWindow = window.open('', '', 'width=800,height=600');
+  const content = detailsView.cloneNode(true);
+
+  // Optional: Remove any hidden or unnecessary nodes if needed here
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Invoice</title>
+        <style>
+          body { font-family: 'Inter', sans-serif; padding: 20px; }
+          .field { display: flex; justify-content: space-between; margin-bottom: 8px; }
+          .label { font-weight: bold; }
+          hr { margin: 12px 0; }
+        </style>
+      </head>
+      <body>
+        <h2>🧾 Event Invoice</h2>
+        <hr />
+        ${content.innerHTML}
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
+
+function renderRows() {
+  const filtered = getFiltered(); // 🔧 Now it uses filtering logic!
+
+  eventsBody.innerHTML = filtered.map(event => {
+    const isAdmin = currentRole === 'admin';
+    const isOwner = event.createdBy === currentRole;
+
+    return `
+      <tr class="hover:bg-gray-50">
+        <td class="px-6 py-4 font-semibold ${
+  event.status === 'Scheduled' ? 'text-blue-800' :
+  event.status === 'Ongoing' ? 'text-yellow-800' :
+  event.status === 'Completed' ? 'text-green-800' :
+  'text-red-800'
+}">
+  <button onclick="viewDetails('${event.id}')" class="text-indigo-700 hover:underline focus:outline-none">
+    ${event.eventName}
+  </button>
+</td>
+        <td class="px-6 py-4">${event.customerName}</td>
+        <td class="px-6 py-4">${event.phone}</td>
+        <td class="px-6 py-4">${new Date(event.dateTime).toLocaleString('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true
+}).replace(',', ' ·')}</td>
+        <td class="px-6 py-4">
+          <span class="px-4 py-1 text-sm font-medium border-2 rounded ${
+  event.status === 'Scheduled' ? 'bg-blue-50 text-blue-700 border-blue-400' :
+  event.status === 'Ongoing' ? 'bg-yellow-50 text-yellow-700 border-yellow-400' :
+  event.status === 'Completed' ? 'bg-green-50 text-green-700 border-green-400' :
+  'bg-red-50 text-red-700 border-red-400'
+}">${event.status}</span>
+        </td>
+        <td class="px-6 py-4">${event.createdBy || 'user'}</td>
+        <td class="px-6 py-4 text-right">$${parseFloat(event.totalCost).toFixed(2)}</td>
+        <td class="px-6 py-4 text-right">$${parseFloat(event.paid).toFixed(2)}</td>
+       <td class="px-6 py-4 text-right font-medium ${
+  (event.totalCost - event.paid) > 0 ? 'text-red-600' : 'text-gray-900'
+}">$${(event.totalCost - event.paid).toFixed(2)}</td>
+
+        <td class="px-6 py-4 text-right space-x-2">
+          ${
+            isAdmin || isOwner
+              ? `<button onclick="viewDetails('${event.id}')" class="text-indigo-600">ℹ️</button>
+                 <button onclick="openEditor('${event.id}')" class="text-yellow-600">✏️</button>
+                 <button onclick="deleteEvent('${event.id}')" class="text-red-600">🗑️</button>
+                 <button onclick="downloadICS('${event.id}')" class="text-green-600" title="Add to Calendar">📅</button>`
+              : `<span class="text-gray-400 italic">Restricted</span>`
+          }
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  eventCount.textContent = filtered.length;
+
+
+  const eventCards = document.getElementById('eventCards');
+  eventCards.innerHTML = filtered.map(event => {
+    const isAdmin = currentRole === 'admin';
+    const isOwner = event.createdBy === currentRole;
+
+    return `
+      <div class="bg-white shadow rounded-lg p-4">
+        <div class="flex justify-between items-center">
+<div class="text-lg font-semibold text-indigo-700 hover:underline cursor-pointer" onclick="viewDetails('${event.id}')">
+  ${event.eventName}
+</div>
+          <span class="px-4 py-1 text-sm font-medium border-2 rounded ${
+  event.status === 'Scheduled' ? 'bg-blue-50 text-blue-700 border-blue-400' :
+  event.status === 'Ongoing' ? 'bg-yellow-50 text-yellow-700 border-yellow-400' :
+  event.status === 'Completed' ? 'bg-green-50 text-green-700 border-green-400' :
+  'bg-red-50 text-red-700 border-red-400'
+}">${event.status}</span>
+        </div>
+        <div class="text-sm text-gray-600 mt-2">${new Date(event.dateTime).toLocaleString('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true
+}).replace(',', ' ·')
+
+}</div>
+        <div class="text-sm mt-2"><strong>Customer:</strong> ${event.customerName}</div>
+        <div class="text-sm"><strong>Phone:</strong> ${event.phone}</div>
+        <div class="text-sm"><strong>Total:</strong> $${parseFloat(event.totalCost).toFixed(2)}</div>
+        <div class="text-sm"><strong>Paid:</strong> $${parseFloat(event.paid).toFixed(2)}</div>
+        <div class="text-sm"><strong>Balance:</strong> $${(event.totalCost - event.paid).toFixed(2)}</div>
+        <div class="text-sm"><strong>Created By:</strong> ${event.createdBy || 'user'}</div>
+        <div class="mt-3 flex flex-wrap gap-3 text-sm">
+          ${
+            isAdmin || isOwner
+              ? `<button onclick="viewDetails('${event.id}')" class="text-indigo-600 hover:underline">ℹ️ Details</button>
+                 <button onclick="openEditor('${event.id}')" class="text-yellow-600 hover:underline">✏️ Edit</button>
+                 <button onclick="deleteEvent('${event.id}')" class="text-red-600 hover:underline">🗑️ Delete</button>
+                 <button onclick="downloadICS('${event.id}')" class="text-green-600 hover:underline" title="Add to Calendar">📅</button>`
+              : `<span class="text-gray-400 italic">Restricted</span>`
+          }
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderRevenueChart() {
+  const monthlyRevenue = {};
+  events.forEach(event => {
+    if (event.status !== 'Cancelled') {
+      const date = new Date(event.dateTime);
+      const month = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+      if (!monthlyRevenue[month]) monthlyRevenue[month] = 0;
+      monthlyRevenue[month] += parseFloat(event.paid);
+    }
+  });
+
+  const ctx = document.getElementById("revenueChart").getContext("2d");
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(monthlyRevenue),
+      datasets: [{
+        label: 'Monthly Revenue ($)',
+        data: Object.values(monthlyRevenue),
+        backgroundColor: '#4F46E5'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+      function downloadICS(eventId) {
+  const ev = events.find(e => e.id === eventId);
+  if (!ev) return alert("Event not found");
+
+  const start = new Date(ev.dateTime);
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2-hour default duration
+
+  const formatDate = (d) => {
+    return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  };
+
+  const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//EventPlannerApp//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:${eventId}
+DTSTAMP:${formatDate(new Date())}
+DTSTART:${formatDate(start)}
+DTEND:${formatDate(end)}
+SUMMARY:${ev.eventName}
+DESCRIPTION:Customer: ${ev.customerName}\\nPhone: ${ev.phone}\\nAddress: ${ev.address}\\nStatus: ${ev.status}
+LOCATION:${ev.venue}
+ORGANIZER;CN=Event Planner:mailto:eventplanner991@gmail.com
+STATUS:CONFIRMED
+SEQUENCE:0
+END:VEVENT
+END:VCALENDAR`;
+
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+
+  // Force download via anchor (mobile compatible)
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${ev.eventName}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+
+function setFilterFromCard(filter) {
+  // Reset revenue filter if "All", "Scheduled", etc. are clicked
+  if (['Scheduled', 'Ongoing', 'Completed', 'Cancelled', 'All'].includes(filter)) {
+    activeFilter = filter;
+    activeRevenueFilter = null; // ✅ reset revenue filter!
+  } 
+  else if (filter === 'Paid') {
+    activeFilter = 'All';
+    activeRevenueFilter = 'Paid';
+  } 
+  else if (filter === 'Unpaid') {
+    activeFilter = 'All';
+    activeRevenueFilter = 'Unpaid';
+  }
+
+  render();
+}
+
+
+  
+ 
+  window.setFilterFromCard = setFilterFromCard;
+  
+  
+      function render() {
+        if (!loggedIn) return;
+        renderStats();
+        renderFilters();
+        renderRows();
+        //renderRevenueChart();
+
+      }
+
+      searchInput.addEventListener('input', render);
+      document.getElementById('sortSelect').addEventListener('change', render);
+document.getElementById('eventFilter').addEventListener('change', render);
+
+      
+      document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  if (!events.length) return alert("No events to export.");
+
+  const headers = [
+    "Created At", "Event Name", "Customer", "Phone", "Address", "Venue",
+    "Status", "Date & Time", "Total Cost", "Paid", "Balance"
+  ];
+
+  const rows = events.map(e => [
+    e.createdAt ? new Date(e.createdAt).toLocaleString() : '',
+    e.eventName || '',
+    e.customerName || '',
+    e.phone || '',
+    e.address || '',
+    e.venue || '',
+    e.status || '',
+    new Date(e.dateTime).toLocaleString(),
+    parseFloat(e.totalCost || 0).toFixed(2),
+    parseFloat(e.paid || 0).toFixed(2),
+    (parseFloat(e.totalCost || 0) - parseFloat(e.paid || 0)).toFixed(2)
+  ]);
+
+  let csv = [headers.join(",")];
+  rows.forEach(row => {
+    csv.push(row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(","));
+  });
+
+  const csvContent = csv.join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", "events.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+});
+
+      render();
+    });
+   
+
+
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+  emailjs.init("tMwPoa38QEavEGxTf");
+  
+
+</script>
+  <!-- Google API -->
+<script>
+  const CLIENT_ID = "26715005266-1rgn6dg55300scl08o77j2qvu9eagdcf.apps.googleusercontent.com";
+  const SCOPES = "https://www.googleapis.com/auth/calendar.events";
+  
+function showToast(message, duration = 3000) {
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.classList.remove("hidden");
+  toast.classList.add("opacity-100");
+
+  setTimeout(() => {
+    toast.classList.add("opacity-0");
+    setTimeout(() => toast.classList.add("hidden"), 300);
+  }, duration);
+}
+let accessToken = null;
+let tokenClient;
+
+window.onload = () => {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: '26715005266-1rgn6dg55300scl08o77j2qvu9eagdcf.apps.googleusercontent.com', // Replace with your OAuth 2.0 Client ID
+    scope: 'https://www.googleapis.com/auth/calendar.events',
+    callback: (tokenResponse) => {
+      if (tokenResponse.error) {
+        console.error("Token Error", tokenResponse);
+        alert("Authorization failed.");
+        return;
+      }
+      accessToken = tokenResponse.access_token;
+      showToast("✅ Google Calendar Connected!");
+    },
+  });
+
+  document.getElementById("connectCalendarBtn").addEventListener("click", () => {
+    tokenClient.requestAccessToken();
+  });
+};
+
+
+async function addToGoogleCalendar(eventData) {
+  if (!accessToken) {
+    alert("Please connect Google Calendar first.");
+    return;
+  }
+
+  const start = new Date(eventData.dateTime);
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // Default 2-hour event
+
+  const calendarEvent = {
+    summary: eventData.eventName,
+    location: eventData.venue,
+    description: `Customer: ${eventData.customerName}\nPhone: ${eventData.phone}\nStatus: ${eventData.status}`,
+    start: {
+      dateTime: start.toISOString(),
+      timeZone: 'America/New_York',
+    },
+    end: {
+      dateTime: end.toISOString(),
+      timeZone: 'America/New_York',
+    },
+  };
+
+  const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(calendarEvent)
+  });
+
+  if (res.ok) {
+    showToast("📅 Event added to Google Calendar!");
+  } else {
+    console.error(await res.json());
+    alert("❌ Failed to add to calendar");
+  }
+}
+
+
+
+</script>
+
+</body>
+</html>
