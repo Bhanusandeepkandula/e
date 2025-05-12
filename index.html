@@ -324,16 +324,39 @@
 </head>
 <body class="bg-gray-50 p-6">
   <!-- Login Modal -->
-  <div id="loginModal" class="fixed inset-0 flex items-center justify-center bg-white bg-opacity-100 z-50">
-  <div class="bg-white rounded-xl p-6 w-[90vw] max-w-sm shadow-xl border-2 border-indigo-200">
-    <h2 class="text-2xl font-bold mb-4 text-center text-indigo-700">🔐 Secure Access</h2>
-    <input id="pinInput" type="password" maxlength="4" placeholder="····"
-      class="w-full bg-gray-50 rounded-md shadow-sm px-4 py-3 text-center text-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
-    <button id="loginBtn" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 transition text-white px-4 py-2 rounded-md font-semibold shadow">
+  <!-- Updated Login Modal -->
+<div id="loginModal" class="fixed inset-0 flex items-center justify-center bg-white bg-opacity-100 z-50">
+  <div class="bg-white rounded-2xl p-8 w-[90vw] max-w-sm shadow-2xl border border-indigo-200 text-center space-y-6">
+    
+    <!-- Icon + Title -->
+    <div class="flex flex-col items-center">
+      <div class="text-4xl">🔐</div>
+      <h2 class="text-xl font-bold text-indigo-700 mt-2">Secure Access</h2>
+      <p class="text-sm text-gray-500 mt-1">Enter your 4-digit PIN</p>
+    </div>
+    
+    <!-- PIN Input -->
+    <input id="pinInput"
+           type="password"
+           maxlength="4"
+           inputmode="numeric"
+           pattern="\d*"
+           oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+           placeholder="••••"
+           class="w-full rounded-lg border border-indigo-300 bg-gray-50 px-4 py-3 text-center text-2xl tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-sm" />
+
+    <!-- Login Button -->
+    <button id="loginBtn"
+            class="w-full bg-indigo-600 hover:bg-indigo-700 transition text-white font-semibold py-3 rounded-lg shadow">
       Login
     </button>
+
+    <!-- Optional: Forgot or Help -->
+    <p class="text-xs text-gray-400">Need help? Contact admin</p>
+
   </div>
 </div>
+
 
 
 <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
@@ -342,19 +365,27 @@
     <p id="roleBadge" class="text-gray-500 mt-1 text-sm"></p>
     <p class="text-gray-500">Organize and keep track of all your events</p>
   </div>
-  <div class="flex gap-2 w-full sm:w-auto justify-end">
-    <button id="connectCalendarBtn" class="bg-black text-white px-4 py-2 rounded">
-  Connect to Calendar
-</button>
-    <button id="addEventBtn" class="bg-indigo-600 text-white px-4 py-2 rounded w-full sm:w-auto">+ Add Event</button>
-    
+ <div class="flex flex-wrap sm:flex-nowrap gap-3 w-full sm:w-auto">
+  <!-- Connect -->
+  <button id="connectCalendarBtn" class="bg-black text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm sm:text-base font-medium shadow w-full sm:w-auto">
+    📅 <span>Connect to Calendar</span>
+  </button>
 
-    <button id="exportCsvBtn"class="bg-green-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-green-700 transition">
-  Export
-</button>
- <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded w-full sm:w-auto">Logout</button>
-   
-  </div>
+  <!-- Add Event -->
+  <button id="addEventBtn" class="bg-indigo-600 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm sm:text-base font-medium shadow hover:bg-indigo-700 transition w-full sm:w-auto">
+    ➕ <span>Add Event</span>
+  </button>
+
+  <!-- Export -->
+  <button id="exportCsvBtn" class="bg-green-600 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm sm:text-base font-medium shadow hover:bg-green-700 transition w-full sm:w-auto">
+    📤 <span>Export</span>
+  </button>
+
+  <!-- Logout -->
+  <button id="logoutBtn" class="bg-red-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm sm:text-base font-medium shadow hover:bg-red-600 transition w-full sm:w-auto">
+    🔒 <span>Logout</span>
+  </button>
+</div>
 </header>
 
 
@@ -746,34 +777,35 @@ function viewDetails(id) {
 }
 
 
-  function deleteEvent(id) {
+ function deleteEvent(id) {
   const ev = events.find(e => e.id === id);
   if (!ev) return alert("Event not found");
 
-  if (confirm('Delete this event?')) {
-    // Send email BEFORE removing the event
-    emailjs.send("service_ihr1f1u", "template_ikihifw", {
-      heading: "❌ Event Cancelled",
-      to_name: ev.customerName || "Guest",
-      to_email: "eventplanner991@gmail.com",
-      event_name: ev.eventName || "",
-      customer_name: ev.customerName || "",
-      phone: ev.phone || "",
-      venue: ev.venue || "",
-      status: ev.status || "",
-      event_date: new Date(ev.dateTime).toLocaleString() || "",
-      total_cost: parseFloat(ev.totalCost || 0).toFixed(2),
-      paid: parseFloat(ev.paid || 0).toFixed(2),
-      balance: (parseFloat(ev.totalCost || 0) - parseFloat(ev.paid || 0)).toFixed(2)
-    });
+  const confirmMsg = `⚠️ Are you sure you want to delete the event:\n\n"${ev.eventName}" for ${ev.customerName}?\n\nThis action cannot be undone.`;
+  if (!confirm(confirmMsg)) return;
 
-    // Now delete from Firebase
-    db.child(id).remove().then(() => {
-      events = events.filter(e => e.id !== id);  // Update local state
-      render();  // Re-render UI
-    });
-  }
+  // Send email BEFORE removing the event
+  emailjs.send("service_ihr1f1u", "template_ikihifw", {
+    heading: "❌ Event Cancelled",
+    to_name: ev.customerName || "Guest",
+    to_email: "eventplanner991@gmail.com",
+    event_name: ev.eventName || "",
+    customer_name: ev.customerName || "",
+    phone: ev.phone || "",
+    venue: ev.venue || "",
+    status: ev.status || "",
+    event_date: new Date(ev.dateTime).toLocaleString() || "",
+    total_cost: parseFloat(ev.totalCost || 0).toFixed(2),
+    paid: parseFloat(ev.paid || 0).toFixed(2),
+    balance: (parseFloat(ev.totalCost || 0) - parseFloat(ev.paid || 0)).toFixed(2)
+  });
+
+  db.child(id).remove().then(() => {
+    events = events.filter(e => e.id !== id);
+    render();
+  });
 }
+
 
 
 
@@ -1115,12 +1147,14 @@ function renderRows() {
 
         <td class="px-6 py-4 text-right space-x-2">
           ${
-            isAdmin || isOwner
-              ? `<button onclick="viewDetails('${event.id}')" class="text-indigo-600">ℹ️</button>
-                 <button onclick="openEditor('${event.id}')" class="text-yellow-600">✏️</button>
-                 <button onclick="deleteEvent('${event.id}')" class="text-red-600">🗑️</button>
-                 <button onclick="downloadICS('${event.id}')" class="text-green-600" title="Add to Calendar">📅</button>`
-              : `<span class="text-gray-400 italic">Restricted</span>`
+            currentRole === 'admin' || event.createdBy === currentRole
+  ? `<button onclick="viewDetails('${event.id}')" class="text-indigo-600">ℹ️</button>
+     ${currentRole === 'admin'
+       ? `<button onclick="openEditor('${event.id}')" class="text-yellow-600">✏️</button>
+          <button onclick="deleteEvent('${event.id}')" class="text-red-600">🗑️</button>
+          <button onclick="downloadICS('${event.id}')" class="text-green-600" title="Add to Calendar">📅</button>`
+       : ''}`
+  : `<button onclick="viewDetails('${event.id}')" class="text-indigo-600">ℹ️</button>`
           }
         </td>
       </tr>
@@ -1136,7 +1170,12 @@ function renderRows() {
     const isOwner = event.createdBy === currentRole;
 
     return `
-      <div class="bg-white shadow rounded-lg p-4">
+      <div class="bg-white shadow rounded-lg p-4 border-2 ${
+  event.status === 'Scheduled' ? 'border-blue-100' :
+  event.status === 'Ongoing' ? 'border-yellow-100' :
+  event.status === 'Completed' ? 'border-green-100' :
+  event.status === 'Cancelled' ? 'border-red-100' : 'border-gray-300'
+}">
         <div class="flex justify-between items-center">
 <div class="text-lg font-semibold text-indigo-700 hover:underline cursor-pointer" onclick="viewDetails('${event.id}')">
   ${event.eventName}
@@ -1423,6 +1462,19 @@ async function addToGoogleCalendar(eventData) {
 
 
 </script>
+<!-- Delete Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+  <div class="flex items-center justify-center min-h-screen px-4">
+    <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">⚠️ Confirm Deletion</h2>
+      <p id="confirmMessage" class="text-sm text-gray-700 mb-6"></p>
+      <div class="flex justify-end gap-3">
+        <button id="cancelDeleteBtn" class="px-4 py-2 rounded border text-gray-600 hover:bg-gray-100">Cancel</button>
+        <button id="confirmDeleteBtn" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
