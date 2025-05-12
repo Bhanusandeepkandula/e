@@ -17,7 +17,11 @@
   <style>
    body {
   font-family: 'Work Sans', sans-serif;
+  background-color: #f9fafb;
+  background-image: radial-gradient(black 1px, transparent 1px);
+  background-size: 20px 20px;
 }
+
 
 /* General Input/Select Styling */
 /* Form input/select inside modal form only */
@@ -1461,6 +1465,7 @@ document.getElementById('eventFilter').addEventListener('change', render);
     const calendarBtn = document.getElementById("connectCalendarBtn");
     const logoutBtn = document.getElementById("logoutBtn");
 
+<<<<<<< HEAD
     if (isConnected) {
       calendarBtn.innerHTML = "✅ Connected";
       calendarBtn.classList.remove("bg-black");
@@ -1576,8 +1581,40 @@ document.getElementById('eventFilter').addEventListener('change', render);
       console.error(await res.json());
       alert("❌ Failed to add to calendar");
     }
+=======
+  const calendarEvent = {
+    summary: eventData.eventName,
+    location: eventData.venue,
+    description: `Customer: ${eventData.customerName}\nPhone: ${eventData.phone}\nStatus: ${eventData.status}`,
+    start: {
+      dateTime: start.toISOString(),
+      timeZone: 'America/New_York',
+    },
+    end: {
+      dateTime: end.toISOString(),
+      timeZone: 'America/New_York',
+    },
+  };
+
+  const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(calendarEvent)
+  });
+
+  if (res.ok) {
+    showToast("📅 Event added to Google Calendar!");
+  } else {
+    console.error(await res.json());
+    alert("❌ Failed to add to calendar");
+>>>>>>> parent of f632a47 (DD)
   }
 </script>
+
+
 
 
 
