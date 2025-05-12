@@ -1431,7 +1431,19 @@ async function addToGoogleCalendar(eventData) {
   const calendarEvent = {
     summary: eventData.eventName,
     location: eventData.venue,
-    description: `Customer: ${eventData.customerName}\nPhone: ${eventData.phone}\nStatus: ${eventData.status}`,
+    description: `📋 Event Details:
+👤 Customer: ${eventData.customerName}
+📞 Phone: ${eventData.phone}
+🏠 Address: ${eventData.address}
+📍 Venue: ${eventData.venue}
+📌 Status: ${eventData.status}
+📅 Date & Time: ${new Date(eventData.dateTime).toLocaleString()}
+💰 Total Cost: $${parseFloat(eventData.totalCost || 0).toFixed(2)}
+✅ Paid: $${parseFloat(eventData.paid || 0).toFixed(2)}
+⏳ Balance: $${(parseFloat(eventData.totalCost || 0) - parseFloat(eventData.paid || 0)).toFixed(2)}
+🕒 Created At: ${eventData.createdAt ? new Date(eventData.createdAt).toLocaleString() : 'N/A'}
+
+🔗 View in Event Planner: https://bhanusandeepkandula.github.io/e/`,
     start: {
       dateTime: start.toISOString(),
       timeZone: 'America/New_York',
@@ -1440,6 +1452,14 @@ async function addToGoogleCalendar(eventData) {
       dateTime: end.toISOString(),
       timeZone: 'America/New_York',
     },
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: 'popup', minutes: 1440 }, // 24 hours
+        { method: 'popup', minutes: 180 },  // 3 hours
+        { method: 'popup', minutes: 30 }    // 30 minutes
+      ]
+    }
   };
 
   const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
@@ -1458,8 +1478,6 @@ async function addToGoogleCalendar(eventData) {
     alert("❌ Failed to add to calendar");
   }
 }
-
-
 
 </script>
 <!-- Delete Confirmation Modal -->
