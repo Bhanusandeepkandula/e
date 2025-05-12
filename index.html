@@ -574,67 +574,51 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database().ref("events");
-
-    document.addEventListener('DOMContentLoaded', () => {
-      let events = [];
-      let activeFilter = 'All';
-      let loggedIn = false;
-      let activeRevenueFilter = null;
-
-
-      // Elements
-      const loginModal = document.getElementById('loginModal');
-      const pinInput = document.getElementById('pinInput');
-      const loginBtn = document.getElementById('loginBtn');
-      const logoutBtn = document.getElementById('logoutBtn');
-      const addEventBtn = document.getElementById('addEventBtn');
-      const stats = document.getElementById('stats');
-      const filtersDiv = document.getElementById('filters');
-      const searchInput = document.getElementById('searchInput');
-      const eventsBody = document.getElementById('eventsBody');
-      const modal = document.getElementById('modal');
-      const closeModalBtn = document.getElementById('closeModalBtn');
-      const detailsView = document.getElementById('detailsView');
-      const eventForm = document.getElementById('eventForm');
-      const modalActions = document.getElementById('modalActions');
-      const saveBtn = document.getElementById('saveBtn');
-      const eventTypeDropdown = document.getElementById('eventTypeDropdown');
-      const customEventName = document.getElementById('customEventName');
-
-eventTypeDropdown.addEventListener('change', () => {
-  if (eventTypeDropdown.value === 'custom') {
-    customEventName.classList.remove('hidden');
-  } else {
-    customEventName.classList.add('hidden');
-  }
-});
+    
+    const eventsBody = document.getElementById("eventsBody");
+const filtersDiv = document.getElementById("filters");
+const stats = document.getElementById("stats");
+const searchInput = document.getElementById("searchInput");
 
 
-      // Auth
-      function showLogin() { loginModal.classList.remove('hidden'); }
-      function hideLogin() { loginModal.classList.add('hidden'); }
-      const roles = { '0000': 'user', '1234': 'admin' };
-let currentRole = null;
+   document.addEventListener('DOMContentLoaded', () => {
+  let loggedIn = false;
+  let currentRole = null;
+  let activeFilter = 'All';
+let activeRevenueFilter = null;
 
-loginBtn.addEventListener('click', () => {
-  const pin = pinInput.value;
-  if (roles[pin]) {
-    currentRole = roles[pin];
+ const usersRef = firebase.database().ref("events/users");
+
+loginBtn.addEventListener('click', async () => {
+  const pin = pinInput.value.trim();
+  const snapshot = await usersRef.child(pin).get();
+
+  if (snapshot.exists()) {
+    const user = snapshot.val();
+    currentRole = user.role;
+    currentUser = user.name;
     loggedIn = true;
-    hideLogin();
-    document.getElementById("roleBadge").innerHTML = `Logged in as: <span class="admin-badge">${currentRole.toUpperCase()}</span>`;
+    localStorage.setItem("eventPlannerRole", currentRole);
+    localStorage.setItem("eventPlannerUser", currentUser);
+    loginModal.classList.add('hidden');
+    roleBadge.innerHTML = `Logged in as: <span class="admin-badge">${currentUser} (${currentRole})</span>`;
     render();
   } else {
-    alert('Invalid PIN');
+    alert("Invalid PIN");
   }
-  document.getElementById('sortSelect').value = 'none';
-  document.getElementById('eventFilter').value = 'all';
 });
 
-      logoutBtn.addEventListener('click', () => {
-        loggedIn = false; showLogin();
-      });
-      showLogin();
+
+  // Logout Handler
+  logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem("eventPlannerRole");
+    currentRole = null;
+    loggedIn = false;
+    loginModal.classList.remove('hidden');
+  });
+
+
+
 
       // Modal handlers
       function showModal() { modal.classList.remove('hidden'); }
@@ -819,82 +803,80 @@ function viewDetails(id) {
       addEventBtn.addEventListener('click', () => openEditor(null));
 
       // Firebase sync
-      db.on('value', snapshot => {
-        events = [];
-        snapshot.forEach(child => {
-          events.push({ id: child.key, ...child.val() });
-        });
-        const now = new Date();
-const upcomingEvents = events.filter(ev => {
-  const eventDate = new Date(ev.dateTime);
-  const diffHours = (eventDate - now) / (1000 * 60 * 60);
-  return diffHours > 0 && diffHours <= 48;
+  db.on('value', snapshot => {
+  events = [];
+  snapshot.forEach(child => {
+   if (child.key !== 'users') {  
+    events.push({ id: child.key, ...child.val() });
+  }});
+
+  // Send email reminders for upcoming events (within 48 hours)
+  const now = new Date();
+  const upcomingEvents = events.filter(ev => {
+    const eventDate = new Date(ev.dateTime);
+    const diffHours = (eventDate - now) / (1000 * 60 * 60);
+    return diffHours > 0 && diffHours <= 48;
+  });
+
+  upcomingEvents.forEach(ev => {
+    emailjs.send("service_ihr1f1u", "template_ikihifw", {
+      heading: "⏰ Upcoming Event Reminder",
+      to_name: ev.customerName || "Guest",
+      to_email: "eventplanner991@gmail.com",
+      event_name: ev.eventName || "",
+      customer_name: ev.customerName || "",
+      phone: ev.phone || "",
+      venue: ev.venue || "",
+      status: ev.status || "",
+      event_date: new Date(ev.dateTime).toLocaleString() || "",
+      total_cost: parseFloat(ev.totalCost || 0).toFixed(2),
+      paid: parseFloat(ev.paid || 0).toFixed(2),
+      balance: (parseFloat(ev.totalCost || 0) - parseFloat(ev.paid || 0)).toFixed(2)
+    });
+  });
+
+  // Bind export button
+  document.getElementById('exportCsvBtn').addEventListener('click', () => {
+    if (events.length === 0) {
+      alert("No events to export.");
+      return;
+    }
+
+    const headers = [
+      "Event Name", "Customer", "Phone", "Address", "Venue",
+      "Status", "Date & Time", "Total Cost", "Paid", "Balance"
+    ];
+
+    const rows = events.map(e => [
+      e.eventName || '',
+      e.customerName || '',
+      e.phone || '',
+      e.address || '',
+      e.venue || '',
+      e.status || '',
+      new Date(e.dateTime).toLocaleString(),
+      parseFloat(e.totalCost || 0).toFixed(2),
+      parseFloat(e.paid || 0).toFixed(2),
+      (parseFloat(e.totalCost || 0) - parseFloat(e.paid || 0)).toFixed(2)
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.setAttribute("href", URL.createObjectURL(blob));
+    link.setAttribute("download", "events.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
+
+  // ✅ Now safe to render (after events are loaded)
+  render();
 });
 
-//let headingText = "New Event Created"; // default
-//if (ev.status === "Cancelled") headingText = "Event Cancelled";
-//else if (!isNew) headingText = "Event Updated";
-//else if (isUpcoming) headingText = "Upcoming Event Reminder";
-
-
-if (trigger === "new") headingText = "🆕 New Event Scheduled";
-else if (trigger === "update") headingText = "✏️ Event Updated";
-else if (trigger === "delete") headingText = "❌ Event Cancelled";
-else if (trigger === "reminder") headingText = "⏰ Upcoming Event Reminder";
-
-emailjs.send("service_ihr1f1u", "template_ikihifw", {
-  heading: headingText,  // e.g., "New Event Created", "Event Updated", etc.
-  event_name: ev.eventName,
-  customer_name: ev.customerName,
-  phone: ev.phone,
-  venue: ev.venue,
-  status: ev.status,
-  event_date: new Date(ev.dateTime).toLocaleString(),
-  total_cost: ev.totalCost,
-  paid: ev.paid,
-  balance: ev.balance
-});
-
-
-        document.getElementById('exportCsvBtn').addEventListener('click', () => {
-  if (events.length === 0) {
-    alert("No events to export.");
-    return;
-  }
-
-  const headers = [
-    "Event Name", "Customer", "Phone", "Address", "Venue",
-    "Status", "Date & Time", "Total Cost", "Paid", "Balance"
-  ];
-
-  const rows = events.map(e => [
-    e.eventName || '',
-    e.customerName || '',
-    e.phone || '',
-    e.address || '',
-    e.venue || '',
-    e.status || '',
-    new Date(e.dateTime).toLocaleString(),
-    parseFloat(e.totalCost || 0).toFixed(2),
-    parseFloat(e.paid || 0).toFixed(2),
-    (parseFloat(e.totalCost || 0) - parseFloat(e.paid || 0)).toFixed(2)
-  ]);
-
-  const csvContent = [headers, ...rows]
-    .map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.setAttribute("href", URL.createObjectURL(blob));
-  link.setAttribute("download", "events.csv");
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-});
-
-        render();
-      });
 
       saveBtn.addEventListener('click', async (e) => {
   e.preventDefault();
@@ -1102,59 +1084,47 @@ function printInvoice() {
 }
 
 function renderRows() {
-  const filtered = getFiltered(); // 🔧 Now it uses filtering logic!
+  const filtered = getFiltered();
 
+  // Render desktop table view
   eventsBody.innerHTML = filtered.map(event => {
-    const isAdmin = currentRole === 'admin';
-    const isOwner = event.createdBy === currentRole;
+    const isAdmin = currentRole === 'Admin';
+    const isOwner = event.createdBy === currentUser;
 
     return `
       <tr class="hover:bg-gray-50">
-        <td class="px-6 py-4 font-semibold ${
-  event.status === 'Scheduled' ? 'text-blue-800' :
-  event.status === 'Ongoing' ? 'text-yellow-800' :
-  event.status === 'Completed' ? 'text-green-800' :
-  'text-red-800'
-}">
-  <button onclick="viewDetails('${event.id}')" class="text-indigo-700 hover:underline focus:outline-none">
-    ${event.eventName}
-  </button>
-</td>
-        <td class="px-6 py-4">${event.customerName}</td>
-        <td class="px-6 py-4">${event.phone}</td>
-        <td class="px-6 py-4">${new Date(event.dateTime).toLocaleString('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
-  hour12: true
-}).replace(',', ' ·')}</td>
+        <td class="px-6 py-4 font-semibold text-indigo-700">
+          <button onclick="viewDetails('${event.id}')" class="hover:underline focus:outline-none">
+            ${event.eventName || '—'}
+          </button>
+        </td>
+        <td class="px-6 py-4">${event.customerName || '—'}</td>
+        <td class="px-6 py-4">${event.phone || '—'}</td>
+        <td class="px-6 py-4">${event.dateTime ? new Date(event.dateTime).toLocaleString() : 'Invalid Date'}</td>
         <td class="px-6 py-4">
           <span class="px-4 py-1 text-sm font-medium border-2 rounded ${
-  event.status === 'Scheduled' ? 'bg-blue-50 text-blue-700 border-blue-400' :
-  event.status === 'Ongoing' ? 'bg-yellow-50 text-yellow-700 border-yellow-400' :
-  event.status === 'Completed' ? 'bg-green-50 text-green-700 border-green-400' :
-  'bg-red-50 text-red-700 border-red-400'
-}">${event.status}</span>
+            event.status === 'Scheduled' ? 'bg-blue-50 text-blue-700 border-blue-400' :
+            event.status === 'Ongoing' ? 'bg-yellow-50 text-yellow-700 border-yellow-400' :
+            event.status === 'Completed' ? 'bg-green-50 text-green-700 border-green-400' :
+            'bg-red-50 text-red-700 border-red-400'
+          }">${event.status || '—'}</span>
         </td>
         <td class="px-6 py-4">${event.createdBy || 'user'}</td>
-        <td class="px-6 py-4 text-right">$${parseFloat(event.totalCost).toFixed(2)}</td>
-        <td class="px-6 py-4 text-right">$${parseFloat(event.paid).toFixed(2)}</td>
-       <td class="px-6 py-4 text-right font-medium ${
-  (event.totalCost - event.paid) > 0 ? 'text-red-600' : 'text-gray-900'
-}">$${(event.totalCost - event.paid).toFixed(2)}</td>
-
+        <td class="px-6 py-4 text-right">$${parseFloat(event.totalCost || 0).toFixed(2)}</td>
+        <td class="px-6 py-4 text-right">$${parseFloat(event.paid || 0).toFixed(2)}</td>
+        <td class="px-6 py-4 text-right font-medium ${
+          (event.totalCost - event.paid) > 0 ? 'text-red-600' : 'text-gray-900'
+        }">$${(event.totalCost - event.paid).toFixed(2)}</td>
         <td class="px-6 py-4 text-right space-x-2">
+          <button onclick="viewDetails('${event.id}')" class="text-indigo-600">ℹ️</button>
           ${
-            currentRole === 'admin' || event.createdBy === currentRole
-  ? `<button onclick="viewDetails('${event.id}')" class="text-indigo-600">ℹ️</button>
-     ${currentRole === 'admin'
-       ? `<button onclick="openEditor('${event.id}')" class="text-yellow-600">✏️</button>
-          <button onclick="deleteEvent('${event.id}')" class="text-red-600">🗑️</button>
-          <button onclick="downloadICS('${event.id}')" class="text-green-600" title="Add to Calendar">📅</button>`
-       : ''}`
-  : `<button onclick="viewDetails('${event.id}')" class="text-indigo-600">ℹ️</button>`
+            isAdmin || isOwner
+              ? `
+                <button onclick="openEditor('${event.id}')" class="text-yellow-600">✏️</button>
+                <button onclick="deleteEvent('${event.id}')" class="text-red-600">🗑️</button>
+                <button onclick="downloadICS('${event.id}')" class="text-green-600" title="Add to Calendar">📅</button>
+              `
+              : ''
           }
         </td>
       </tr>
@@ -1163,53 +1133,46 @@ function renderRows() {
 
   eventCount.textContent = filtered.length;
 
-
+  // Render mobile card view
   const eventCards = document.getElementById('eventCards');
   eventCards.innerHTML = filtered.map(event => {
-    const isAdmin = currentRole === 'admin';
-    const isOwner = event.createdBy === currentRole;
+    const isAdmin = currentRole === 'Admin';
+    const isOwner = event.createdBy === currentUser;
 
     return `
       <div class="bg-white shadow rounded-lg p-4 border-2 ${
-  event.status === 'Scheduled' ? 'border-blue-100' :
-  event.status === 'Ongoing' ? 'border-yellow-100' :
-  event.status === 'Completed' ? 'border-green-100' :
-  event.status === 'Cancelled' ? 'border-red-100' : 'border-gray-300'
-}">
+        event.status === 'Scheduled' ? 'border-blue-100' :
+        event.status === 'Ongoing' ? 'border-yellow-100' :
+        event.status === 'Completed' ? 'border-green-100' :
+        event.status === 'Cancelled' ? 'border-red-100' : 'border-gray-300'
+      }">
         <div class="flex justify-between items-center">
-<div class="text-lg font-semibold text-indigo-700 hover:underline cursor-pointer" onclick="viewDetails('${event.id}')">
-  ${event.eventName}
-</div>
+          <div class="text-lg font-semibold text-indigo-700 hover:underline cursor-pointer" onclick="viewDetails('${event.id}')">
+            ${event.eventName}
+          </div>
           <span class="px-4 py-1 text-sm font-medium border-2 rounded ${
-  event.status === 'Scheduled' ? 'bg-blue-50 text-blue-700 border-blue-400' :
-  event.status === 'Ongoing' ? 'bg-yellow-50 text-yellow-700 border-yellow-400' :
-  event.status === 'Completed' ? 'bg-green-50 text-green-700 border-green-400' :
-  'bg-red-50 text-red-700 border-red-400'
-}">${event.status}</span>
+            event.status === 'Scheduled' ? 'bg-blue-50 text-blue-700 border-blue-400' :
+            event.status === 'Ongoing' ? 'bg-yellow-50 text-yellow-700 border-yellow-400' :
+            event.status === 'Completed' ? 'bg-green-50 text-green-700 border-green-400' :
+            'bg-red-50 text-red-700 border-red-400'
+          }">${event.status}</span>
         </div>
-        <div class="text-sm text-gray-600 mt-2">${new Date(event.dateTime).toLocaleString('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
-  hour12: true
-}).replace(',', ' ·')
-
-}</div>
-        <div class="text-sm mt-2"><strong>Customer:</strong> ${event.customerName}</div>
-        <div class="text-sm"><strong>Phone:</strong> ${event.phone}</div>
-        <div class="text-sm"><strong>Total:</strong> $${parseFloat(event.totalCost).toFixed(2)}</div>
-        <div class="text-sm"><strong>Paid:</strong> $${parseFloat(event.paid).toFixed(2)}</div>
+        <div class="text-sm text-gray-600 mt-2">${event.dateTime ? new Date(event.dateTime).toLocaleString() : 'Invalid Date'}</div>
+        <div class="text-sm mt-2"><strong>Customer:</strong> ${event.customerName || '—'}</div>
+        <div class="text-sm"><strong>Phone:</strong> ${event.phone || '—'}</div>
+        <div class="text-sm"><strong>Total:</strong> $${parseFloat(event.totalCost || 0).toFixed(2)}</div>
+        <div class="text-sm"><strong>Paid:</strong> $${parseFloat(event.paid || 0).toFixed(2)}</div>
         <div class="text-sm"><strong>Balance:</strong> $${(event.totalCost - event.paid).toFixed(2)}</div>
         <div class="text-sm"><strong>Created By:</strong> ${event.createdBy || 'user'}</div>
         <div class="mt-3 flex flex-wrap gap-3 text-sm">
+          <button onclick="viewDetails('${event.id}')" class="text-indigo-600 hover:underline">ℹ️ Details</button>
           ${
             isAdmin || isOwner
-              ? `<button onclick="viewDetails('${event.id}')" class="text-indigo-600 hover:underline">ℹ️ Details</button>
-                 <button onclick="openEditor('${event.id}')" class="text-yellow-600 hover:underline">✏️ Edit</button>
-                 <button onclick="deleteEvent('${event.id}')" class="text-red-600 hover:underline">🗑️ Delete</button>
-                 <button onclick="downloadICS('${event.id}')" class="text-green-600 hover:underline" title="Add to Calendar">📅</button>`
+              ? `
+                <button onclick="openEditor('${event.id}')" class="text-yellow-600 hover:underline">✏️ Edit</button>
+                <button onclick="deleteEvent('${event.id}')" class="text-red-600 hover:underline">🗑️ Delete</button>
+                <button onclick="downloadICS('${event.id}')" class="text-green-600 hover:underline">📅</button>
+              `
               : `<span class="text-gray-400 italic">Restricted</span>`
           }
         </div>
@@ -1217,6 +1180,7 @@ function renderRows() {
     `;
   }).join('');
 }
+
 
 function renderRevenueChart() {
   const monthlyRevenue = {};
@@ -1290,6 +1254,88 @@ END:VCALENDAR`;
 }
 
 
+function addUser() {
+  const name = document.getElementById('newUserName').value.trim();
+  const pin = document.getElementById('newUserPIN').value.trim();
+
+  if (!name || !pin || pin.length !== 4 || isNaN(pin)) {
+    alert("Please enter a valid name and 4-digit PIN.");
+    return;
+  }
+
+  usersRef.child(pin).once("value", (snapshot) => {
+    if (snapshot.exists()) {
+      alert("This PIN is already in use.");
+    } else {
+      usersRef.child(pin).set({
+        name,
+        role: "User"
+      }).then(() => {
+        document.getElementById('newUserName').value = '';
+        document.getElementById('newUserPIN').value = '';
+        loadUsersToManage();
+      });
+    }
+  });
+}
+
+function deleteUser(pin) {
+  if (!confirm("Are you sure you want to delete this user?")) return;
+  usersRef.child(pin).remove().then(loadUsersToManage);
+}
+
+function toggleAdmin(pin, makeAdmin) {
+  usersRef.child(pin).update({
+    role: makeAdmin ? "Admin" : "User"
+  }).then(loadUsersToManage);
+}
+
+async function loadUsersToManage() {
+  const snapshot = await usersRef.get();
+  const userList = document.getElementById('userList');
+  userList.innerHTML = '';
+
+  if (snapshot.exists()) {
+    const users = snapshot.val();
+    userList.innerHTML = Object.entries(users).map(([pin, user]) => `
+      <div class="flex justify-between items-center border p-2 rounded">
+        <div>
+          <p><strong>${user.name}</strong> (PIN: ${pin})</p>
+          <p class="text-sm text-gray-500">Role: ${user.role}</p>
+        </div>
+        <div class="space-x-2">
+          ${user.role === "Admin"
+            ? `<button onclick="toggleAdmin('${pin}', false)" class="text-yellow-600 text-sm">Remove Admin</button>`
+            : `<button onclick="toggleAdmin('${pin}', true)" class="text-green-600 text-sm">Make Admin</button>`}
+          <button onclick="deleteUser('${pin}')" class="text-red-600 text-sm">Delete</button>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+document.getElementById('roleBadge').addEventListener('click', () => {
+  if (currentRole === 'Admin') {
+    loadUsersToManage();
+    document.getElementById('adminPanelModal').classList.remove('hidden');
+  } else {
+    alert("You don't have admin privileges.");
+  }
+});
+
+function closeAdminPanel() {
+  document.getElementById('adminPanelModal').classList.add('hidden');
+}
+
+// Make global for HTML button handlers
+window.addUser = addUser;
+window.deleteUser = deleteUser;
+window.toggleAdmin = toggleAdmin;
+window.closeAdminPanel = closeAdminPanel;
+window.loadUsersToManage = loadUsersToManage;
+
+
+
 function setFilterFromCard(filter) {
   // Reset revenue filter if "All", "Scheduled", etc. are clicked
   if (['Scheduled', 'Ongoing', 'Completed', 'Cancelled', 'All'].includes(filter)) {
@@ -1312,7 +1358,13 @@ function setFilterFromCard(filter) {
   
  
   window.setFilterFromCard = setFilterFromCard;
-  
+  // ✅ Make user management functions accessible globally
+window.renderUserList = renderUserList;
+window.closeAdminPanel = closeAdminPanel;
+window.addUser = addUser;
+window.toggleAdmin = toggleAdmin;
+window.deleteUser = deleteUser;
+
   
       function render() {
         if (!loggedIn) return;
@@ -1366,8 +1418,10 @@ document.getElementById('eventFilter').addEventListener('change', render);
   document.body.removeChild(link);
 });
 
-      render();
-    });
+     render();
+     });
+
+
    
 
 
@@ -1383,55 +1437,106 @@ document.getElementById('eventFilter').addEventListener('change', render);
 <script>
   const CLIENT_ID = "26715005266-1rgn6dg55300scl08o77j2qvu9eagdcf.apps.googleusercontent.com";
   const SCOPES = "https://www.googleapis.com/auth/calendar.events";
-  
-function showToast(message, duration = 3000) {
-  const toast = document.getElementById("toast");
-  toast.textContent = message;
-  toast.classList.remove("hidden");
-  toast.classList.add("opacity-100");
+  let accessToken = null;
+  let tokenClient;
 
-  setTimeout(() => {
-    toast.classList.add("opacity-0");
-    setTimeout(() => toast.classList.add("hidden"), 300);
-  }, duration);
-}
-let accessToken = null;
-let tokenClient;
+  // Initialize EmailJS
+  emailjs.init("tMwPoa38QEavEGxTf");
 
-window.onload = () => {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: '26715005266-1rgn6dg55300scl08o77j2qvu9eagdcf.apps.googleusercontent.com', // Replace with your OAuth 2.0 Client ID
-    scope: 'https://www.googleapis.com/auth/calendar.events',
-    callback: (tokenResponse) => {
-      if (tokenResponse.error) {
-        console.error("Token Error", tokenResponse);
-        alert("Authorization failed.");
-        return;
-      }
-      accessToken = tokenResponse.access_token;
-      showToast("✅ Google Calendar Connected!");
-    },
-  });
+  // Toast Message
+  function showToast(message, duration = 3000) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.classList.remove("hidden", "opacity-0");
+    toast.classList.add("opacity-100");
 
-  document.getElementById("connectCalendarBtn").addEventListener("click", () => {
-    tokenClient.requestAccessToken();
-  });
-};
-
-
-async function addToGoogleCalendar(eventData) {
-  if (!accessToken) {
-    alert("Please connect Google Calendar first.");
-    return;
+    setTimeout(() => {
+      toast.classList.add("opacity-0");
+      setTimeout(() => toast.classList.add("hidden"), 300);
+    }, duration);
   }
 
-  const start = new Date(eventData.dateTime);
-  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // Default 2-hour event
+  // Update Google Calendar Button UI
+  function updateCalendarButtonUI(isConnected) {
+    const calendarBtn = document.getElementById("connectCalendarBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
 
-  const calendarEvent = {
-    summary: eventData.eventName,
-    location: eventData.venue,
-    description: `📋 Event Details:
+    if (isConnected) {
+      calendarBtn.innerHTML = "✅ Connected";
+      calendarBtn.classList.remove("bg-black");
+      calendarBtn.classList.add("bg-green-600", "hover:bg-green-700", "cursor-default");
+      calendarBtn.disabled = true;
+      calendarBtn.style.pointerEvents = 'none';
+      logoutBtn.classList.add("relative");
+      logoutBtn.innerHTML = `
+        🔒 <span>Logout</span>
+        <span class="absolute top-0 right-0 h-2 w-2 bg-green-400 rounded-full border-2 border-white"></span>
+      `;
+    } else {
+      calendarBtn.innerHTML = "📅 Connect to Calendar";
+      calendarBtn.classList.remove("bg-green-600", "hover:bg-green-700", "cursor-default");
+      calendarBtn.classList.add("bg-black");
+      calendarBtn.disabled = false;
+      calendarBtn.style.pointerEvents = 'auto';
+      logoutBtn.innerHTML = '🔒 <span>Logout</span>';
+    }
+  }
+
+  // Google Calendar Setup
+  window.onload = () => {
+    const calendarBtn = document.getElementById("connectCalendarBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: (tokenResponse) => {
+        if (tokenResponse.error) {
+          console.error("Token Error", tokenResponse);
+          alert("Authorization failed.");
+          return;
+        }
+        accessToken = tokenResponse.access_token;
+        sessionStorage.setItem("googleAccessToken", accessToken);
+        showToast("✅ Google Calendar Connected!");
+        updateCalendarButtonUI(true);
+      },
+    });
+
+    calendarBtn.addEventListener("click", () => {
+      tokenClient.requestAccessToken();
+    });
+
+    logoutBtn.addEventListener("click", () => {
+      accessToken = null;
+      sessionStorage.removeItem("googleAccessToken");
+      updateCalendarButtonUI(false);
+    });
+
+    // Restore token if exists
+    const savedToken = sessionStorage.getItem("googleAccessToken");
+    if (savedToken) {
+      accessToken = savedToken;
+      updateCalendarButtonUI(true);
+    } else {
+      updateCalendarButtonUI(false);
+    }
+  };
+
+  // Add Event to Google Calendar
+  async function addToGoogleCalendar(eventData) {
+    if (!accessToken) {
+      alert("Please connect Google Calendar first.");
+      return;
+    }
+
+    const start = new Date(eventData.dateTime);
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // +2 hours
+
+    const calendarEvent = {
+      summary: eventData.eventName,
+      location: eventData.venue,
+      description: `📋 Event Details:
 👤 Customer: ${eventData.customerName}
 📞 Phone: ${eventData.phone}
 🏠 Address: ${eventData.address}
@@ -1444,40 +1549,38 @@ async function addToGoogleCalendar(eventData) {
 🕒 Created At: ${eventData.createdAt ? new Date(eventData.createdAt).toLocaleString() : 'N/A'}
 
 🔗 View in Event Planner: https://bhanusandeepkandula.github.io/e/`,
-    start: {
-      dateTime: start.toISOString(),
-      timeZone: 'America/New_York',
-    },
-    end: {
-      dateTime: end.toISOString(),
-      timeZone: 'America/New_York',
-    },
-    reminders: {
-      useDefault: false,
-      overrides: [
-        { method: 'popup', minutes: 1440 }, // 24 hours
-        { method: 'popup', minutes: 180 },  // 3 hours
-        { method: 'popup', minutes: 30 }    // 30 minutes
-      ]
+      start: { dateTime: start.toISOString(), timeZone: 'America/New_York' },
+      end: { dateTime: end.toISOString(), timeZone: 'America/New_York' },
+      reminders: {
+        useDefault: false,
+        overrides: [
+          { method: 'popup', minutes: 1440 },
+          { method: 'popup', minutes: 180 },
+          { method: 'popup', minutes: 30 }
+        ]
+      }
+    };
+
+    const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(calendarEvent)
+    });
+
+    if (res.ok) {
+      showToast("📅 Event added to Google Calendar!");
+    } else {
+      console.error(await res.json());
+      alert("❌ Failed to add to calendar");
     }
-  };
-
-  const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(calendarEvent)
-  });
-
-  if (res.ok) {
-    showToast("📅 Event added to Google Calendar!");
-  } else {
-    console.error(await res.json());
-    alert("❌ Failed to add to calendar");
   }
-}
+</script>
+
+
+
 
 </script>
 <!-- Delete Confirmation Modal -->
@@ -1489,6 +1592,28 @@ async function addToGoogleCalendar(eventData) {
       <div class="flex justify-end gap-3">
         <button id="cancelDeleteBtn" class="px-4 py-2 rounded border text-gray-600 hover:bg-gray-100">Cancel</button>
         <button id="confirmDeleteBtn" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Admin Panel Modal -->
+<div id="adminPanelModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+  <div class="flex items-center justify-center min-h-screen px-4">
+    <div class="bg-white rounded-lg shadow-lg max-w-xl w-full p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold text-gray-800">👥 Manage Users</h2>
+        <button onclick="closeAdminPanel()" class="text-red-500 text-xl font-bold">✕</button>
+      </div>
+      <div id="userList" class="space-y-4 mb-4"></div>
+      <div class="border-t pt-4">
+        <h3 class="font-semibold mb-2 text-sm">➕ Add New User</h3>
+        <div class="flex gap-2 mb-2">
+          <input id="newUserName" type="text" placeholder="Name" class="border p-2 rounded w-1/2" />
+          <input id="newUserPIN" type="text" placeholder="4-digit PIN" maxlength="4" class="border p-2 rounded w-1/2" />
+        </div>
+        <button onclick="addUser()" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-sm">
+          Add User
+        </button>
       </div>
     </div>
   </div>
