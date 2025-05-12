@@ -18,8 +18,8 @@
    body {
   font-family: 'Work Sans', sans-serif;
   background-color: #f9fafb;
-  background-image: radial-gradient(black 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-image: radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
+  background-size: 16px 16px;
 }
 
 
@@ -1363,7 +1363,7 @@ function setFilterFromCard(filter) {
  
   window.setFilterFromCard = setFilterFromCard;
   // ✅ Make user management functions accessible globally
-window.renderUserList = renderUserList;
+window.renderUserList = loadUsersToManage;
 window.closeAdminPanel = closeAdminPanel;
 window.addUser = addUser;
 window.toggleAdmin = toggleAdmin;
@@ -1465,7 +1465,6 @@ document.getElementById('eventFilter').addEventListener('change', render);
     const calendarBtn = document.getElementById("connectCalendarBtn");
     const logoutBtn = document.getElementById("logoutBtn");
 
-<<<<<<< HEAD
     if (isConnected) {
       calendarBtn.innerHTML = "✅ Connected";
       calendarBtn.classList.remove("bg-black");
@@ -1488,45 +1487,32 @@ document.getElementById('eventFilter').addEventListener('change', render);
   }
 
   // Google Calendar Setup
-  window.onload = () => {
-    const calendarBtn = document.getElementById("connectCalendarBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
+ window.onload = () => {
+  if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+    console.error("Google API not loaded");
+    return;
+  }
 
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPES,
-      callback: (tokenResponse) => {
-        if (tokenResponse.error) {
-          console.error("Token Error", tokenResponse);
-          alert("Authorization failed.");
-          return;
-        }
-        accessToken = tokenResponse.access_token;
-        sessionStorage.setItem("googleAccessToken", accessToken);
-        showToast("✅ Google Calendar Connected!");
-        updateCalendarButtonUI(true);
-      },
-    });
-
-    calendarBtn.addEventListener("click", () => {
-      tokenClient.requestAccessToken();
-    });
-
-    logoutBtn.addEventListener("click", () => {
-      accessToken = null;
-      sessionStorage.removeItem("googleAccessToken");
-      updateCalendarButtonUI(false);
-    });
-
-    // Restore token if exists
-    const savedToken = sessionStorage.getItem("googleAccessToken");
-    if (savedToken) {
-      accessToken = savedToken;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (tokenResponse) => {
+      if (tokenResponse.error) {
+        console.error("Token Error", tokenResponse);
+        alert("Authorization failed.");
+        return;
+      }
+      accessToken = tokenResponse.access_token;
+      sessionStorage.setItem("googleAccessToken", accessToken);
+      showToast("✅ Google Calendar Connected!");
       updateCalendarButtonUI(true);
-    } else {
-      updateCalendarButtonUI(false);
-    }
-  };
+    },
+  });
+
+  document.getElementById("connectCalendarBtn").addEventListener("click", () => {
+    tokenClient.requestAccessToken();
+  });
+};
 
   // Add Event to Google Calendar
   async function addToGoogleCalendar(eventData) {
@@ -1581,36 +1567,6 @@ document.getElementById('eventFilter').addEventListener('change', render);
       console.error(await res.json());
       alert("❌ Failed to add to calendar");
     }
-=======
-  const calendarEvent = {
-    summary: eventData.eventName,
-    location: eventData.venue,
-    description: `Customer: ${eventData.customerName}\nPhone: ${eventData.phone}\nStatus: ${eventData.status}`,
-    start: {
-      dateTime: start.toISOString(),
-      timeZone: 'America/New_York',
-    },
-    end: {
-      dateTime: end.toISOString(),
-      timeZone: 'America/New_York',
-    },
-  };
-
-  const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(calendarEvent)
-  });
-
-  if (res.ok) {
-    showToast("📅 Event added to Google Calendar!");
-  } else {
-    console.error(await res.json());
-    alert("❌ Failed to add to calendar");
->>>>>>> parent of f632a47 (DD)
   }
 </script>
 
