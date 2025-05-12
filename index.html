@@ -293,6 +293,7 @@
 }
 #filters button:hover {
   background-color: #e0e7ff;
+  color: black;
 }@media (max-width: 640px) {
   .filter-container {
     flex-direction: column;
@@ -592,35 +593,62 @@ const searchInput = document.getElementById("searchInput");
 let activeRevenueFilter = null;
 
  const usersRef = firebase.database().ref("events/users");
+const savedRole = localStorage.getItem("eventPlannerRole");
+  const savedUser = localStorage.getItem("eventPlannerUser");
 
-loginBtn.addEventListener('click', async () => {
-  const pin = pinInput.value.trim();
-  const snapshot = await usersRef.child(pin).get();
-
-  if (snapshot.exists()) {
-    const user = snapshot.val();
-    currentRole = user.role;
-    currentUser = user.name;
+  if (savedRole && savedUser) {
+    currentRole = savedRole;
+    currentUser = savedUser;
     loggedIn = true;
-    localStorage.setItem("eventPlannerRole", currentRole);
-    localStorage.setItem("eventPlannerUser", currentUser);
     loginModal.classList.add('hidden');
     roleBadge.innerHTML = `Logged in as: <span class="admin-badge">${currentUser} (${currentRole})</span>`;
-    render();
-  } else {
-    alert("Invalid PIN");
   }
-});
+
+  // ✅ Load events AFTER user logs in
+  const db = firebase.database().ref("events");
+  db.on('value', snapshot => {
+    events = [];
+    snapshot.forEach(child => {
+      if (child.key !== 'users') {
+        events.push({ id: child.key, ...child.val() });
+      }
+    });
+
+    if (loggedIn) render(); // Only render after events are fetched and user is logged in
+  });
+
+loginBtn.addEventListener('click', async () => {
+    const pin = pinInput.value.trim();
+    const snapshot = await usersRef.child(pin).get();
+
+    if (snapshot.exists()) {
+      const user = snapshot.val();
+      currentRole = user.role;
+      currentUser = user.name;
+      loggedIn = true;
+      localStorage.setItem("eventPlannerRole", currentRole);
+      localStorage.setItem("eventPlannerUser", currentUser);
+      loginModal.classList.add('hidden');
+      roleBadge.innerHTML = `Logged in as: <span class="admin-badge">${currentUser} (${currentRole})</span>`;
+      render();
+    } else {
+      alert("Invalid PIN");
+    }
+  });
 
 
   // Logout Handler
-  logoutBtn.addEventListener('click', () => {
+logoutBtn.addEventListener('click', () => {
     localStorage.removeItem("eventPlannerRole");
+    localStorage.removeItem("eventPlannerUser");
+    localStorage.removeItem("googleAccessToken"); // 🔄 also clear Google token
     currentRole = null;
+    currentUser = null;
+    accessToken = null;
     loggedIn = false;
     loginModal.classList.remove('hidden');
+    updateCalendarButtonUI(false);
   });
-
 
 
 
@@ -629,37 +657,48 @@ loginBtn.addEventListener('click', async () => {
       function hideModal() { modal.classList.add('hidden'); }
       closeModalBtn.addEventListener('click', hideModal);
 
-   function openEditor(id) {
-  eventForm.reset(); 
+function openEditor(id) {
+  eventForm.reset();
   detailsView.innerHTML = '';
   modalTitle.textContent = id ? 'Edit Event' : 'New Event';
-  modalActions.classList.remove('hidden'); 
+  modalActions.classList.remove('hidden');
   eventForm.classList.remove('hidden');
+
+  // Clear any previous sync info
+  const existingSyncMsg = document.querySelector("#modalTitle + p.text-green-600");
+  if (existingSyncMsg) existingSyncMsg.remove();
+
+  const syncButtonHtml = `
+    <button id="manualSyncBtn" class="bg-purple-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-purple-700 transition ml-2">
+      🔄 Sync to Calendar
+    </button>
+  `;
 
   if (id) {
     const ev = events.find(e => e.id == id);
-
-    // ✅ Set the hidden ID field so it can be reused when saving
     eventForm.elements['id'].value = ev.id;
 
-    // Fill in all existing form fields except eventName (handled separately)
+    // Fill form
     Object.keys(ev).forEach(k => {
       if (eventForm.elements[k] && k !== "eventName") {
         eventForm.elements[k].value = ev[k];
+      } else if (k === 'gcalId') {
+        let existingHidden = eventForm.querySelector('input[name="gcalId"]');
+        if (!existingHidden) {
+          const hidden = document.createElement("input");
+          hidden.type = "hidden";
+          hidden.name = "gcalId";
+          hidden.value = ev[k];
+          eventForm.appendChild(hidden);
+        } else {
+          existingHidden.value = ev[k];
+        }
       }
     });
 
-    // Handle custom dropdown logic for event name
-    const predefinedOptions = [
-      "House Warming",
-      "Half Saree Function",
-      "Haldi",
-      "Sweet Sixteen Party",
-      "Marriage Mandap & Anniversary",
-      "Graduation Party"
-    ];
-
-    if (predefinedOptions.includes(ev.eventName)) {
+    // Handle event name custom logic
+    const predefined = ["House Warming", "Half Saree Function", "Haldi", "Sweet Sixteen Party", "Marriage Mandap & Anniversary", "Graduation Party"];
+    if (predefined.includes(ev.eventName)) {
       eventTypeDropdown.value = ev.eventName;
       customEventName.classList.add('hidden');
       customEventName.value = '';
@@ -668,8 +707,23 @@ loginBtn.addEventListener('click', async () => {
       customEventName.classList.remove('hidden');
       customEventName.value = ev.eventName;
     }
+
+    // ✅ Show sync info
+    if (accessToken && ev.gcalId) {
+      const syncInfo = document.createElement("p");
+      syncInfo.className = "text-sm text-green-600 mt-1";
+      syncInfo.textContent = "✅ Synced to Google Calendar";
+      modalTitle.insertAdjacentElement("afterend", syncInfo);
+    }
+
+    // ✅ Inject Sync Button next to Save
+    if (!document.getElementById("manualSyncBtn")) {
+      const syncBtn = document.createElement("div");
+      syncBtn.innerHTML = syncButtonHtml;
+      modalActions.insertAdjacentHTML("beforeend", syncButtonHtml);
+    }
+
   } else {
-    // New event: clear ID
     eventForm.elements['id'].value = '';
     eventTypeDropdown.value = '';
     customEventName.classList.add('hidden');
@@ -678,6 +732,41 @@ loginBtn.addEventListener('click', async () => {
 
   showModal();
 }
+
+document.addEventListener("click", async (e) => {
+  if (e.target && e.target.id === "manualSyncBtn") {
+    const formData = new FormData(eventForm);
+    const data = Object.fromEntries(formData);
+    data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : eventTypeDropdown.value;
+
+    if (!accessToken) {
+      alert("Please connect Google Calendar first.");
+      return;
+    }
+
+    const syncBtn = document.getElementById("manualSyncBtn");
+    syncBtn.disabled = true;
+    syncBtn.textContent = "⏳ Syncing...";
+
+    try {
+      const gcalId = await addToGoogleCalendar(data, data.gcalId || null);
+      if (gcalId) {
+        data.gcalId = gcalId;
+        await db.child(data.id).set(data);
+        syncBtn.textContent = "✅ Synced!";
+      }
+    } catch (error) {
+      console.warn("Manual sync failed:", error);
+      syncBtn.textContent = "❌ Failed";
+    } finally {
+      setTimeout(() => {
+        syncBtn.disabled = false;
+        syncBtn.textContent = "🔄 Sync to Calendar";
+      }, 2000);
+    }
+  }
+});
+
 
 function viewDetails(id) {
   eventForm.classList.add('hidden');
@@ -694,7 +783,8 @@ function viewDetails(id) {
       <button onclick="printInvoice()" class="bg-blue-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-blue-700 transition">
         🖨️ Print
       </button>
-      <button id="syncCalendarBtn" class="bg-purple-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-purple-700 transition">
+      ${accessToken && ev.gcalId ? `<span class="text-green-600 text-sm">✅ Synced</span>` : ""}
+      <button id="manualViewSyncBtn" class="bg-purple-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-purple-700 transition">
         🔄 Sync to Calendar
       </button>
       <button id="closeModalBtn" class="text-gray-500 hover:text-red-500 text-xl font-bold h-10 w-10 flex items-center justify-center">
@@ -703,24 +793,26 @@ function viewDetails(id) {
     </div>
   `;
 
-  // Close button logic
+  // Close button
   document.getElementById("closeModalBtn").addEventListener("click", hideModal);
 
-  // Sync to Calendar logic
-  document.getElementById("syncCalendarBtn").addEventListener("click", async () => {
-    if (!accessToken) {
-      alert("Please connect Google Calendar first.");
-      return;
-    }
+  // Manual sync from details view
+  document.getElementById("manualViewSyncBtn").addEventListener("click", async () => {
+    if (!accessToken) return alert("Please connect Google Calendar first.");
 
-    const syncBtn = document.getElementById("syncCalendarBtn");
+    const syncBtn = document.getElementById("manualViewSyncBtn");
     syncBtn.disabled = true;
     syncBtn.textContent = "⏳ Syncing...";
+
     try {
-      await addToGoogleCalendar(ev);
-      syncBtn.textContent = "✅ Synced!";
-    } catch (err) {
-      console.error("Google Calendar Sync Failed:", err);
+      const gcalId = await addToGoogleCalendar(ev, ev.gcalId || null);
+      if (gcalId) {
+        ev.gcalId = gcalId;
+        await db.child(ev.id).set(ev);
+        syncBtn.textContent = "✅ Synced!";
+      }
+    } catch (error) {
+      console.warn("View sync failed:", error);
       syncBtn.textContent = "❌ Failed";
     } finally {
       setTimeout(() => {
@@ -730,7 +822,7 @@ function viewDetails(id) {
     }
   });
 
-  // Display event details
+  // Render details
   const fields = [
     { label: "📝 Event Name", key: "eventName" },
     { label: "👤 Customer", key: "customerName" },
@@ -747,11 +839,9 @@ function viewDetails(id) {
 
   fields.forEach(({ label, key }) => {
     const value = ev[key]
-      ? (
-        key.includes("date") || key.toLowerCase().includes("created")
+      ? (key.includes("date") || key.toLowerCase().includes("created")
           ? new Date(ev[key]).toLocaleString()
-          : ev[key]
-      )
+          : ev[key])
       : "—";
 
     const p = document.createElement("div");
@@ -765,14 +855,27 @@ function viewDetails(id) {
 }
 
 
- function deleteEvent(id) {
+
+function deleteEvent(id) {
   const ev = events.find(e => e.id === id);
   if (!ev) return alert("Event not found");
 
   const confirmMsg = `⚠️ Are you sure you want to delete the event:\n\n"${ev.eventName}" for ${ev.customerName}?\n\nThis action cannot be undone.`;
   if (!confirm(confirmMsg)) return;
 
-  // Send email BEFORE removing the event
+  // ✅ Delete from Google Calendar first (if connected and has eventId)
+  if (accessToken && ev.gcalId) {
+    fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${ev.gcalId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    }).then(res => {
+      if (!res.ok) console.warn("Google Calendar delete failed", res.status);
+    });
+  }
+
+  // ✅ Send cancellation email
   emailjs.send("service_ihr1f1u", "template_ikihifw", {
     heading: "❌ Event Cancelled",
     to_name: ev.customerName || "Guest",
@@ -788,14 +891,12 @@ function viewDetails(id) {
     balance: (parseFloat(ev.totalCost || 0) - parseFloat(ev.paid || 0)).toFixed(2)
   });
 
+  // ✅ Remove from Firebase
   db.child(id).remove().then(() => {
     events = events.filter(e => e.id !== id);
     render();
   });
 }
-
-
-
 
         
       
@@ -891,6 +992,11 @@ function viewDetails(id) {
 
   // Handle custom or selected event name
   data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : eventTypeDropdown.value;
+// Retain existing createdAt or assign new one if missing
+const existingEvent = events.find(ev => ev.id === data.id);
+data.createdAt = isNew
+  ? new Date().toISOString()
+  : (existingEvent?.createdAt || new Date().toISOString());
 
   const isNew = !data.id || data.id.trim() === '';
   
@@ -909,8 +1015,20 @@ function viewDetails(id) {
   await db.child(data.id).set(data);
   // 🔁 Add to Google Calendar automatically
 if (accessToken) {
-  addToGoogleCalendar(data);
+  try {
+    const updatedGcalId = await addToGoogleCalendar(data, data.gcalId || null);
+    if (updatedGcalId) {
+      data.gcalId = updatedGcalId;
+    }
+  } catch (error) {
+    console.warn("Google Calendar update failed:", error);
+    showToast("⚠️ Failed to sync with Google Calendar");
+  }
 }
+
+// ✅ Save updated data (whether calendar sync worked or not)
+await db.child(data.id).set(data);
+
 
 
  // Now safe and direct
@@ -1515,19 +1633,19 @@ document.getElementById('eventFilter').addEventListener('change', render);
 };
 
   // Add Event to Google Calendar
-  async function addToGoogleCalendar(eventData) {
-    if (!accessToken) {
-      alert("Please connect Google Calendar first.");
-      return;
-    }
+async function addToGoogleCalendar(eventData, existingId = null) {
+  if (!accessToken) {
+    alert("Please connect Google Calendar first.");
+    return null;
+  }
 
-    const start = new Date(eventData.dateTime);
-    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // +2 hours
+  const start = new Date(eventData.dateTime);
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2 hours
 
-    const calendarEvent = {
-      summary: eventData.eventName,
-      location: eventData.venue,
-      description: `📋 Event Details:
+  const calendarEvent = {
+    summary: eventData.eventName,
+    location: eventData.venue,
+    description: `📋 Event Details:
 👤 Customer: ${eventData.customerName}
 📞 Phone: ${eventData.phone}
 🏠 Address: ${eventData.address}
@@ -1537,37 +1655,47 @@ document.getElementById('eventFilter').addEventListener('change', render);
 💰 Total Cost: $${parseFloat(eventData.totalCost || 0).toFixed(2)}
 ✅ Paid: $${parseFloat(eventData.paid || 0).toFixed(2)}
 ⏳ Balance: $${(parseFloat(eventData.totalCost || 0) - parseFloat(eventData.paid || 0)).toFixed(2)}
-🕒 Created At: ${eventData.createdAt ? new Date(eventData.createdAt).toLocaleString() : 'N/A'}
-
-🔗 View in Event Planner: https://bhanusandeepkandula.github.io/e/`,
-      start: { dateTime: start.toISOString(), timeZone: 'America/New_York' },
-      end: { dateTime: end.toISOString(), timeZone: 'America/New_York' },
-      reminders: {
-        useDefault: false,
-        overrides: [
-          { method: 'popup', minutes: 1440 },
-          { method: 'popup', minutes: 180 },
-          { method: 'popup', minutes: 30 }
-        ]
-      }
-    };
-
-    const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(calendarEvent)
-    });
-
-    if (res.ok) {
-      showToast("📅 Event added to Google Calendar!");
-    } else {
-      console.error(await res.json());
-      alert("❌ Failed to add to calendar");
+🕒 Created At: ${eventData.createdAt ? new Date(eventData.createdAt).toLocaleString() : 'N/A'}`,
+    start: { dateTime: start.toISOString(), timeZone: 'America/New_York' },
+    end: { dateTime: end.toISOString(), timeZone: 'America/New_York' },
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: 'popup', minutes: 1440 },
+        { method: 'popup', minutes: 180 },
+        { method: 'popup', minutes: 30 }
+      ]
     }
+  };
+
+  const url = existingId
+    ? `https://www.googleapis.com/calendar/v3/calendars/primary/events/${existingId}`
+    : `https://www.googleapis.com/calendar/v3/calendars/primary/events`;
+
+  const method = existingId ? 'PUT' : 'POST';
+
+  const res = await fetch(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(calendarEvent)
+  });
+
+  if (res.ok) {
+    const result = await res.json();
+    showToast(existingId ? "✅ Google Calendar Event Updated" : "📅 Event Added to Calendar");
+    return result.id; // this becomes new or updated gcalId
+  } else {
+    const error = await res.json();
+    console.error("Calendar sync failed:", error);
+    alert("❌ Failed to sync with Google Calendar");
+    return null;
   }
+}
+
+
 </script>
 
 
