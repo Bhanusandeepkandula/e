@@ -18,7 +18,7 @@
    body {
   font-family: 'Work Sans', sans-serif;
   background-color: #f9fafb;
-  background-image: radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(0,0,0,0.07) 1px, transparent 1px);
   background-size: 16px 16px;
 }
 
@@ -392,6 +392,8 @@
   </button>
 </div>
 </header>
+<!-- Mobile Hamburger Menu (small screens only) -->
+
 
 
   <section id="stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4 mb-6"></section>
@@ -487,9 +489,7 @@
       <div class="flex justify-between items-center mb-4">
         <h2 id="modalTitle" class="text-xl font-semibold text-gray-800">📋 Event Details</h2>
         <div class="flex items-center gap-3">
-          <button onclick="printInvoice()" class="bg-blue-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-blue-700 transition">
-            🖨️ Print
-          </button>
+      
           <button id="closeModalBtn" class="text-gray-500 hover:text-red-500 text-xl font-bold h-10 w-10 flex items-center justify-center">
             ✕
           </button>
@@ -591,6 +591,12 @@ const searchInput = document.getElementById("searchInput");
   let currentRole = null;
   let activeFilter = 'All';
 let activeRevenueFilter = null;
+let events = [];
+const syncButtonHtml = `
+  <button id="manualSyncBtn" class="bg-indigo-600 text-white px-4 py-2 rounded-md">
+    🔄 Sync
+  </button>`;
+
 
  const usersRef = firebase.database().ref("events/users");
 const savedRole = localStorage.getItem("eventPlannerRole");
@@ -637,6 +643,8 @@ loginBtn.addEventListener('click', async () => {
   });
 
 
+
+
   // Logout Handler
 logoutBtn.addEventListener('click', () => {
     localStorage.removeItem("eventPlannerRole");
@@ -668,11 +676,6 @@ function openEditor(id) {
   const existingSyncMsg = document.querySelector("#modalTitle + p.text-green-600");
   if (existingSyncMsg) existingSyncMsg.remove();
 
-  const syncButtonHtml = `
-    <button id="manualSyncBtn" class="bg-purple-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-purple-700 transition ml-2">
-      🔄 Sync to Calendar
-    </button>
-  `;
 
   if (id) {
     const ev = events.find(e => e.id == id);
@@ -712,16 +715,15 @@ function openEditor(id) {
     if (accessToken && ev.gcalId) {
       const syncInfo = document.createElement("p");
       syncInfo.className = "text-sm text-green-600 mt-1";
-      syncInfo.textContent = "✅ Synced to Google Calendar";
       modalTitle.insertAdjacentElement("afterend", syncInfo);
     }
 
-    // ✅ Inject Sync Button next to Save
-    if (!document.getElementById("manualSyncBtn")) {
-      const syncBtn = document.createElement("div");
-      syncBtn.innerHTML = syncButtonHtml;
-      modalActions.insertAdjacentHTML("beforeend", syncButtonHtml);
-    }
+    // only inject manual sync for NEW events (id===null) — remove for edit mode
+if (!id) {
+  modalActions.insertAdjacentHTML("beforeend", syncButtonHtml);
+}
+
+    
 
   } else {
     eventForm.elements['id'].value = '';
@@ -761,7 +763,7 @@ document.addEventListener("click", async (e) => {
     } finally {
       setTimeout(() => {
         syncBtn.disabled = false;
-        syncBtn.textContent = "🔄 Sync to Calendar";
+        syncBtn.textContent = "🔄 Sync";
       }, 2000);
     }
   }
@@ -780,12 +782,10 @@ function viewDetails(id) {
   modalHeader.innerHTML = `
     <h2 id="modalTitle" class="text-xl font-semibold text-gray-800">📋 Event Details</h2>
     <div class="flex items-center gap-3">
-      <button onclick="printInvoice()" class="bg-blue-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-blue-700 transition">
-        🖨️ Print
-      </button>
+      
       ${accessToken && ev.gcalId ? `<span class="text-green-600 text-sm">✅ Synced</span>` : ""}
       <button id="manualViewSyncBtn" class="bg-purple-600 text-white px-4 py-2 h-10 rounded-md text-sm shadow hover:bg-purple-700 transition">
-        🔄 Sync to Calendar
+        🔄 Sync
       </button>
       <button id="closeModalBtn" class="text-gray-500 hover:text-red-500 text-xl font-bold h-10 w-10 flex items-center justify-center">
         ✕
@@ -817,7 +817,7 @@ function viewDetails(id) {
     } finally {
       setTimeout(() => {
         syncBtn.disabled = false;
-        syncBtn.textContent = "🔄 Sync to Calendar";
+        syncBtn.textContent = "🔄 Sync";
       }, 2000);
     }
   });
@@ -983,59 +983,70 @@ function deleteEvent(id) {
 });
 
 
-      saveBtn.addEventListener('click', async (e) => {
+// assuming saveBtn, eventForm, eventTypeDropdown, customEventName, db, events,
+// currentRole, loggedIn, addToGoogleCalendar, accessToken, hideModal, render
+saveBtn.addEventListener('click', async (e) => {
   e.preventDefault();
   if (!loggedIn || eventForm.classList.contains('hidden')) return;
 
+  // --- 1) Gather & prepare data ---
   const formData = new FormData(eventForm);
   let data = Object.fromEntries(formData);
 
-  // Handle custom or selected event name
-  data.eventName = eventTypeDropdown.value === 'custom' ? customEventName.value : eventTypeDropdown.value;
-// Retain existing createdAt or assign new one if missing
-const existingEvent = events.find(ev => ev.id === data.id);
-data.createdAt = isNew
-  ? new Date().toISOString()
-  : (existingEvent?.createdAt || new Date().toISOString());
-
+  // Is this a new event?
   const isNew = !data.id || data.id.trim() === '';
-  
-  // If new, create a unique ID
+
+  // Event name from dropdown or custom field
+  data.eventName = eventTypeDropdown.value === 'custom'
+    ? customEventName.value
+    : eventTypeDropdown.value;
+
+  // Assign or preserve createdAt
   if (isNew) {
     data.id = db.push().key;
     data.createdAt = new Date().toISOString();
+  } else {
+    const existing = events.find(ev => ev.id === data.id);
+    data.createdAt = existing?.createdAt || new Date().toISOString();
   }
 
+  // Normalize numeric fields
   data.createdBy = currentRole;
   data.totalCost = parseFloat(data.totalCost) || 0;
-  data.paid = parseFloat(data.paid) || 0;
-  data.balance = data.totalCost - data.paid;
+  data.paid      = parseFloat(data.paid)      || 0;
+  data.balance   = data.totalCost - data.paid;
 
-  // ✅ Store under events/{id}
+  // --- 2) Enter “Saving…” state ---
+  saveBtn.disabled = true;
+  saveBtn.textContent = '💾 Saving…';
+  saveBtn.classList.add('opacity-75');
+
+  // --- 3) Write to Firebase ---
   await db.child(data.id).set(data);
-  // 🔁 Add to Google Calendar automatically
-if (accessToken) {
-  try {
-    const updatedGcalId = await addToGoogleCalendar(data, data.gcalId || null);
-    if (updatedGcalId) {
-      data.gcalId = updatedGcalId;
+
+  // --- 4) Switch to “Syncing…” state ---
+  saveBtn.textContent = '🔄 Syncing…';
+
+  if (accessToken) {
+    try {
+      const newGcalId = await addToGoogleCalendar(data, data.gcalId || null);
+      if (newGcalId) {
+        data.gcalId = newGcalId;
+        // update only the gcalId field
+        await db.child(data.id).update({ gcalId: newGcalId });
+      }
+    } catch (err) {
+      console.warn('Calendar sync failed:', err);
+      showToast('⚠️ Failed to sync with Google Calendar');
     }
-  } catch (error) {
-    console.warn("Google Calendar update failed:", error);
-    showToast("⚠️ Failed to sync with Google Calendar");
   }
-}
 
-// ✅ Save updated data (whether calendar sync worked or not)
-await db.child(data.id).set(data);
+  // --- 5) Final “Done” state ---
+  saveBtn.textContent = '✅ Done';
+  saveBtn.classList.remove('opacity-75');
+  saveBtn.classList.add('bg-green-600');
 
-
-
- // Now safe and direct
-
-
-
-  // ✅ Send Email
+  // --- 6) Send notification email ---
   emailjs.send("service_ihr1f1u", "template_ikihifw", {
     heading: isNew ? "🆕 New Event Scheduled" : "✏️ Event Updated",
     to_name: data.customerName || "Guest",
@@ -1051,8 +1062,14 @@ await db.child(data.id).set(data);
     balance: data.balance.toFixed(2)
   });
 
-  hideModal();
-  render();
+  // --- 7) Cleanup after a short pause ---
+  setTimeout(() => {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save';
+    saveBtn.classList.remove('bg-green-600');
+    hideModal();
+    render();
+  }, 1500);
 });
 
 
@@ -1176,34 +1193,7 @@ function getFiltered() {
     </div>
   `;
 }
-function printInvoice() {
-  const printWindow = window.open('', '', 'width=800,height=600');
-  const content = detailsView.cloneNode(true);
 
-  // Optional: Remove any hidden or unnecessary nodes if needed here
-
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Invoice</title>
-        <style>
-          body { font-family: 'Inter', sans-serif; padding: 20px; }
-          .field { display: flex; justify-content: space-between; margin-bottom: 8px; }
-          .label { font-weight: bold; }
-          hr { margin: 12px 0; }
-        </style>
-      </head>
-      <body>
-        <h2>🧾 Event Invoice</h2>
-        <hr />
-        ${content.innerHTML}
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
-}
 
 function renderRows() {
   const filtered = getFiltered();
@@ -1561,6 +1551,13 @@ document.getElementById('eventFilter').addEventListener('change', render);
   const SCOPES = "https://www.googleapis.com/auth/calendar.events";
   let accessToken = null;
   let tokenClient;
+
+  const saved = sessionStorage.getItem("googleAccessToken");
+if (saved) {
+  accessToken = saved;
+  // update the button immediately so it looks “Connected”
+  updateCalendarButtonUI(true);
+}
 
   // Initialize EmailJS
   emailjs.init("tMwPoa38QEavEGxTf");
