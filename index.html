@@ -1156,37 +1156,37 @@ function getFiltered() {
   });
 
   stats.innerHTML = `
-    <div onclick="setFilterFromCard('All')" class="p-4 stat-card bg-indigo-35 rounded-lg border-2 border-indigo-300 cursor-pointer">
+    <div onclick="setFilterFromCard('All')" class="p-4 stat-card bg-indigo-100 rounded-lg border-2 border-indigo-300 cursor-pointer">
       <div class="text-indigo-600 text-xl mb-2">📦</div>
       <div class="text-sm text-gray-600">All Events</div>
       <div class="text-xl font-semibold">${events.length}</div>
     </div>
-    <div onclick="setFilterFromCard('Scheduled')" class="p-4 stat-card bg-blue-35 rounded-lg border-2 border-blue-300 cursor-pointer">
+    <div onclick="setFilterFromCard('Scheduled')" class="p-4 stat-card bg-blue-100 rounded-lg border-2 border-blue-300 cursor-pointer">
       <div class="text-blue-600 text-xl mb-2">📅</div>
       <div class="text-sm text-gray-600">Scheduled</div>
       <div class="text-xl font-semibold">${counts.Scheduled}</div>
     </div>
-    <div onclick="setFilterFromCard('Ongoing')" class="p-4 stat-card bg-yellow-35 rounded-lg border-2 border-yellow-300 cursor-pointer">
+    <div onclick="setFilterFromCard('Ongoing')" class="p-4 stat-card bg-yellow-100 rounded-lg border-2 border-yellow-300 cursor-pointer">
       <div class="text-yellow-600 text-xl mb-2">⏱️</div>
       <div class="text-sm text-gray-600">Ongoing</div>
       <div class="text-xl font-semibold">${counts.Ongoing}</div>
     </div>
-    <div onclick="setFilterFromCard('Completed')" class="p-4 stat-card bg-green-35 rounded-lg border-2 border-green-300 cursor-pointer">
+    <div onclick="setFilterFromCard('Completed')" class="p-4 stat-card bg-green-100 rounded-lg border-2 border-green-300 cursor-pointer">
       <div class="text-green-600 text-xl mb-2">✅</div>
       <div class="text-sm text-gray-600">Completed</div>
       <div class="text-xl font-semibold">${counts.Completed}</div>
     </div>
-    <div onclick="setFilterFromCard('Cancelled')" class="p-4 stat-card bg-red-35 rounded-lg border-2 border-red-300 cursor-pointer">
+    <div onclick="setFilterFromCard('Cancelled')" class="p-4 stat-card bg-red-100 rounded-lg border-2 border-red-300 cursor-pointer">
       <div class="text-red-600 text-xl mb-2">❌</div>
       <div class="text-sm text-gray-600">Cancelled</div>
       <div class="text-xl font-semibold">${counts.Cancelled}</div>
     </div>
-    <div onclick="setFilterFromCard('Paid')" class="p-4 stat-card bg-teal-35 rounded-lg border-2 border-teal-300 cursor-pointer">
+    <div onclick="setFilterFromCard('Paid')" class="p-4 stat-card bg-teal-100 rounded-lg border-2 border-teal-300 cursor-pointer">
       <div class="text-teal-600 text-xl mb-2">💲</div>
       <div class="text-sm text-gray-600">Total Earned</div>
       <div class="text-xl font-semibold">$${totalEarned.toFixed(2)}</div>
     </div>
-   <div onclick="setFilterFromCard('Unpaid')" class="p-4 stat-card bg-pink-35 rounded-lg border-2 border-pink-300 cursor-pointer">
+   <div onclick="setFilterFromCard('Unpaid')" class="p-4 stat-card bg-pink-100 rounded-lg border-2 border-pink-300 cursor-pointer">
  <div class="text-pink-600 text-xl mb-2">💰</div>
       <div class="text-sm text-gray-600">Balance</div>
       <div class="text-xl font-semibold">$${totalBalance.toFixed(2)}</div>
