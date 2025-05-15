@@ -13,6 +13,35 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Core Material Icons -->
+<link
+  href="https://fonts.googleapis.com/css2?family=Material+Icons&display=swap"
+  rel="stylesheet"
+/>
+
+<!-- Outlined style -->
+<link
+  href="https://fonts.googleapis.com/css2?family=Material+Icons+Outlined&display=swap"
+  rel="stylesheet"
+/>
+
+<!-- Round style -->
+<link
+  href="https://fonts.googleapis.com/css2?family=Material+Icons+Round&display=swap"
+  rel="stylesheet"
+/>
+
+<!-- Two‑Tone style -->
+<link
+  href="https://fonts.googleapis.com/css2?family=Material+Icons+Two+Tone&display=swap"
+  rel="stylesheet"
+/>
+
+<!-- Sharp style -->
+<link
+  href="https://fonts.googleapis.com/css2?family=Material+Icons+Sharp&display=swap"
+  rel="stylesheet"
+/>
 
   <style>
    body {
@@ -323,6 +352,60 @@
     width: 100% !important;
   }
 }
+.stat-card .value {
+  font-weight: 600;   /* instead of 800+ */
+  color: #1F2937;      /* a dark charcoal, not pure black */
+}
+.stat-card .subvalue {
+  opacity: .75;
+}
+.progress {
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  margin-top: .5rem;
+}
+.progress-fill {
+  height: 100%;
+  background: rgba(255,255,255,0.8);
+  border-radius: 2px;
+  transition: width .3s ease;
+}
+.icon-wrapper {
+  position: absolute;
+  top: 1rem; right: 1rem;
+  background: rgba(255,255,255,0.15);
+  border-radius: 9999px;
+  padding: .5rem;
+}
+.icon-wrapper .material-icons-round {
+  font-size: 1.25rem;
+  color: #fff;
+}
+.stat-card .label   { font-size: .875rem; letter-spacing: .5px; }
+.stat-card .value   { font-size: 1.875rem; }  /* ~30px */
+.stat-card .subvalue{ font-size: .75rem;       /* ~12px */ }
+
+
+
+ #eventsTable th,
+  #eventsTable td {
+    font-size: 1.1rem;
+  }
+ #eventsTitle {
+      font-size: calc(1.25rem * 1.07);
+    }
+
+    /* bump your filter inputs (default 0.875rem) up by 7% → ~0.9375rem */
+    #searchInput,
+    #sortSelect,
+    #eventFilter {
+      font-size: calc(0.875rem * 1.07);
+    }
+
+     #stats .stat-card {
+    border-width: 3px !important;
+  }
 
 
   </style>
@@ -372,33 +455,111 @@
   </div>
  <div class="flex flex-wrap sm:flex-nowrap gap-3 w-full sm:w-auto">
   <!-- Connect -->
-  <button id="connectCalendarBtn" class="bg-black text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm sm:text-base font-medium shadow w-full sm:w-auto">
-    📅 <span>Connect to Calendar</span>
-  </button>
+  <!-- Action Buttons -->
+    <div class="flex flex-wrap sm:flex-nowrap gap-3 w-full sm:w-auto">
+      <!-- Connect -->
+      <button id="connectCalendarBtn" class="bg-black hover:bg-gray-900 text-white flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium shadow">
+        <span class="material-icons-round">calendar_month</span>
+        <span>Connect to Calendar</span>
+      </button>
 
-  <!-- Add Event -->
-  <button id="addEventBtn" class="bg-indigo-600 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm sm:text-base font-medium shadow hover:bg-indigo-700 transition w-full sm:w-auto">
-    ➕ <span>Add Event</span>
-  </button>
+      <!-- Add Event -->
+      <button id="addEventBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium shadow">
+        <span class="material-icons-round">add</span>
+        <span>Add Event</span>
+      </button>
 
-  <!-- Export -->
-  <button id="exportCsvBtn" class="bg-green-600 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm sm:text-base font-medium shadow hover:bg-green-700 transition w-full sm:w-auto">
-    📤 <span>Export</span>
-  </button>
+      <!-- Export -->
+      <button id="exportCsvBtn" class="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium shadow">
+        <span class="material-icons-round">file_upload</span>
+        <span>Export</span>
+      </button>
 
-  <!-- Logout -->
-  <button id="logoutBtn" class="bg-red-500 text-white flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm sm:text-base font-medium shadow hover:bg-red-600 transition w-full sm:w-auto">
-    🔒 <span>Logout</span>
-  </button>
-</div>
+      <!-- Logout -->
+      <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium shadow">
+        <span class="material-icons-round">logout</span>
+        <span>Logout</span>
+      </button>
+    </div>
 </header>
 <!-- Mobile Hamburger Menu (small screens only) -->
 
 
+<div id="listView">
+<section id="stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4 mb-6">
+  <!-- All Events -->
+  <div onclick="setFilterFromCard('All')" class="relative p-4 rounded-lg border bg-gray-100 text-gray-800 border-gray-300 cursor-pointer">
+    <div class="absolute top-4 right-4 opacity-60">
+      <i class="fas fa-box-open text-2xl"></i>
+    </div>
+    <div class="text-sm font-medium">All Events</div>
+    <div class="text-3xl font-semibold mt-1" id="stat-all">0</div>
+    <div class="text-xs mt-2 text-gray-600" id="stat-all-pct">0.0% of total</div>
+  </div>
 
-  <section id="stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4 mb-6"></section>
+  <!-- Scheduled -->
+  <div onclick="setFilterFromCard('Scheduled')" class="relative p-4 rounded-lg border bg-blue-100 text-blue-800 border-blue-200 cursor-pointer">
+    <div class="absolute top-4 right-4 opacity-60">
+      <i class="fas fa-calendar-check text-2xl"></i>
+    </div>
+    <div class="text-sm font-medium">Scheduled</div>
+    <div class="text-3xl font-semibold mt-1" id="stat-scheduled">0</div>
+    <div class="text-xs mt-2 text-blue-600" id="stat-scheduled-pct">0.0% of total</div>
+  </div>
 
-<div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-4 mb-6">
+  <!-- Ongoing -->
+  <div onclick="setFilterFromCard('Ongoing')" class="relative p-4 rounded-lg border bg-yellow-100 text-yellow-800 border-yellow-200 cursor-pointer">
+    <div class="absolute top-4 right-4 opacity-60">
+      <i class="fas fa-stopwatch text-2xl"></i>
+    </div>
+    <div class="text-sm font-medium">Ongoing</div>
+    <div class="text-3xl font-semibold mt-1" id="stat-ongoing">0</div>
+    <div class="text-xs mt-2 text-yellow-600" id="stat-ongoing-pct">0.0% of total</div>
+  </div>
+
+  <!-- Completed -->
+  <div onclick="setFilterFromCard('Completed')" class="relative p-4 rounded-lg border bg-green-100 text-green-800 border-green-200 cursor-pointer">
+    <div class="absolute top-4 right-4 opacity-60">
+      <i class="fas fa-check-circle text-2xl"></i>
+    </div>
+    <div class="text-sm font-medium">Completed</div>
+    <div class="text-3xl font-semibold mt-1" id="stat-completed">0</div>
+    <div class="text-xs mt-2 text-green-600" id="stat-completed-pct">0.0% of total</div>
+  </div>
+
+  <!-- Cancelled -->
+  <div onclick="setFilterFromCard('Cancelled')" class="relative p-4 rounded-lg border bg-red-100 text-red-800 border-red-200 cursor-pointer">
+    <div class="absolute top-4 right-4 opacity-60">
+      <i class="fas fa-times-circle text-2xl"></i>
+    </div>
+    <div class="text-sm font-medium">Cancelled</div>
+    <div class="text-3xl font-semibold mt-1" id="stat-cancelled">0</div>
+    <div class="text-xs mt-2 text-red-600" id="stat-cancelled-pct">0.0% of total</div>
+  </div>
+
+  <!-- Total Earned -->
+  <div onclick="setFilterFromCard('Paid')" class="relative p-4 rounded-lg border bg-teal-100 text-teal-800 border-teal-200 cursor-pointer">
+    <div class="absolute top-4 right-4 opacity-60">
+      <i class="fas fa-dollar-sign text-2xl"></i>
+    </div>
+    <div class="text-sm font-medium">Total Earned</div>
+    <div class="text-3xl font-semibold mt-1" id="stat-earned">$0.00</div>
+    <div class="text-xs mt-2 text-teal-600" id="stat-earned-pct">0.0% of revenue</div>
+  </div>
+
+  <!-- Total Balance -->
+  <div onclick="setFilterFromCard('Unpaid')" class="relative p-4 rounded-lg border bg-pink-100 text-pink-800 border-pink-200 cursor-pointer">
+    <div class="absolute top-4 right-4 opacity-60">
+      <i class="fas fa-wallet text-2xl"></i>
+    </div>
+    <div class="text-sm font-medium">Total Balance</div>
+    <div class="text-3xl font-semibold mt-1" id="stat-balance">$0.00</div>
+    <div class="text-xs mt-2 text-pink-600" id="stat-balance-pct">0.0% of revenue</div>
+  </div>
+</section>
+
+  <!-- ── Filters + Table ── -->
+  <div class="flex flex-wrap sm:flex-nowrap justify-between items-center gap-4 mb-6">
   <h2 class="text-xl font-semibold leading-[2.5rem] h-10">Events</h2>
   
   <div class="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full sm:w-auto">
@@ -876,7 +1037,7 @@ function deleteEvent(id) {
   }
 
   // ✅ Send cancellation email
-  emailjs.send("service_ihr1f1u", "template_ikihifw", {
+  emailjs.send("service_2knqx0b", "template_drgujx7", {
     heading: "❌ Event Cancelled",
     to_name: ev.customerName || "Guest",
     to_email: "eventplanner991@gmail.com",
@@ -924,7 +1085,7 @@ function deleteEvent(id) {
   });
 
   upcomingEvents.forEach(ev => {
-    emailjs.send("service_ihr1f1u", "template_ikihifw", {
+    emailjs.send("service_2knqx0b", "template_drgujx7", {
       heading: "⏰ Upcoming Event Reminder",
       to_name: ev.customerName || "Guest",
       to_email: "eventplanner991@gmail.com",
@@ -1047,7 +1208,7 @@ saveBtn.addEventListener('click', async (e) => {
   saveBtn.classList.add('bg-green-600');
 
   // --- 6) Send notification email ---
-  emailjs.send("service_ihr1f1u", "template_ikihifw", {
+  emailjs.send("service_2knqx0b", "template_drgujx7", {
     heading: isNew ? "🆕 New Event Scheduled" : "✏️ Event Updated",
     to_name: data.customerName || "Guest",
     to_email: "eventplanner991@gmail.com",
@@ -1143,55 +1304,67 @@ function getFiltered() {
 
 
 
-     function renderStats() {
-  const counts = { Scheduled: 0, Ongoing: 0, Completed: 0, Cancelled: 0 };
-  let totalEarned = 0, totalBalance = 0;
+  function renderStats() {
+  // --- 1) Tally statuses and revenue ---
+  const counts = {
+    All:       events.length,
+    Scheduled: 0,
+    Ongoing:   0,
+    Completed: 0,
+    Cancelled: 0
+  };
+  let totalEarned  = 0;
+  let totalBalance = 0;
 
-  events.forEach(event => {
-    counts[event.status]++;
-    if (event.status !== 'Cancelled') {
-      totalEarned += parseFloat(event.paid);
-      totalBalance += parseFloat(event.totalCost) - parseFloat(event.paid);
+  events.forEach(ev => {
+    if (counts.hasOwnProperty(ev.status)) {
+      counts[ev.status]++;
+    }
+    // accumulate revenue only for non-cancelled
+    if (ev.status !== 'Cancelled') {
+      const paid  = parseFloat(ev.paid)      || 0;
+      const cost  = parseFloat(ev.totalCost) || 0;
+      totalEarned  += paid;
+      totalBalance += (cost - paid);
     }
   });
 
-  stats.innerHTML = `
-    <div onclick="setFilterFromCard('All')" class="p-4 stat-card bg-indigo-100 rounded-lg border-2 border-indigo-300 cursor-pointer">
-      <div class="text-indigo-600 text-xl mb-2">📦</div>
-      <div class="text-sm text-gray-600">All Events</div>
-      <div class="text-xl font-semibold">${events.length}</div>
-    </div>
-    <div onclick="setFilterFromCard('Scheduled')" class="p-4 stat-card bg-blue-100 rounded-lg border-2 border-blue-300 cursor-pointer">
-      <div class="text-blue-600 text-xl mb-2">📅</div>
-      <div class="text-sm text-gray-600">Scheduled</div>
-      <div class="text-xl font-semibold">${counts.Scheduled}</div>
-    </div>
-    <div onclick="setFilterFromCard('Ongoing')" class="p-4 stat-card bg-yellow-100 rounded-lg border-2 border-yellow-300 cursor-pointer">
-      <div class="text-yellow-600 text-xl mb-2">⏱️</div>
-      <div class="text-sm text-gray-600">Ongoing</div>
-      <div class="text-xl font-semibold">${counts.Ongoing}</div>
-    </div>
-    <div onclick="setFilterFromCard('Completed')" class="p-4 stat-card bg-green-100 rounded-lg border-2 border-green-300 cursor-pointer">
-      <div class="text-green-600 text-xl mb-2">✅</div>
-      <div class="text-sm text-gray-600">Completed</div>
-      <div class="text-xl font-semibold">${counts.Completed}</div>
-    </div>
-    <div onclick="setFilterFromCard('Cancelled')" class="p-4 stat-card bg-red-100 rounded-lg border-2 border-red-300 cursor-pointer">
-      <div class="text-red-600 text-xl mb-2">❌</div>
-      <div class="text-sm text-gray-600">Cancelled</div>
-      <div class="text-xl font-semibold">${counts.Cancelled}</div>
-    </div>
-    <div onclick="setFilterFromCard('Paid')" class="p-4 stat-card bg-teal-100 rounded-lg border-2 border-teal-300 cursor-pointer">
-      <div class="text-teal-600 text-xl mb-2">💲</div>
-      <div class="text-sm text-gray-600">Total Earned</div>
-      <div class="text-xl font-semibold">$${totalEarned.toFixed(2)}</div>
-    </div>
-   <div onclick="setFilterFromCard('Unpaid')" class="p-4 stat-card bg-pink-100 rounded-lg border-2 border-pink-300 cursor-pointer">
- <div class="text-pink-600 text-xl mb-2">💰</div>
-      <div class="text-sm text-gray-600">Balance</div>
-      <div class="text-xl font-semibold">$${totalBalance.toFixed(2)}</div>
-    </div>
-  `;
+  // combined pool for % calcs
+  const revenuePool = totalEarned + totalBalance;
+
+  // --- 2) Helpers for formatting ---
+  const fmtCountPct = n => counts.All
+    ? ((n / counts.All) * 100).toFixed(1) + '% of total'
+    : '0.0% of total';
+
+  const fmtRev = n => `$${n.toFixed(2)}`;
+  const fmtRevPct = n => revenuePool
+    ? ((n / revenuePool) * 100).toFixed(1) + '% of revenue'
+    : '0.0% of revenue';
+
+  // --- 3) Inject into DOM ---
+  // counts & counts %
+  document.getElementById('stat-all').textContent           = counts.All;
+  document.getElementById('stat-all-pct').textContent       = fmtCountPct(counts.All);
+
+  document.getElementById('stat-scheduled').textContent     = counts.Scheduled;
+  document.getElementById('stat-scheduled-pct').textContent = fmtCountPct(counts.Scheduled);
+
+  document.getElementById('stat-ongoing').textContent       = counts.Ongoing;
+  document.getElementById('stat-ongoing-pct').textContent   = fmtCountPct(counts.Ongoing);
+
+  document.getElementById('stat-completed').textContent     = counts.Completed;
+  document.getElementById('stat-completed-pct').textContent = fmtCountPct(counts.Completed);
+
+  document.getElementById('stat-cancelled').textContent     = counts.Cancelled;
+  document.getElementById('stat-cancelled-pct').textContent = fmtCountPct(counts.Cancelled);
+
+  // revenue & revenue %
+  document.getElementById('stat-earned').textContent        = fmtRev(totalEarned);
+  document.getElementById('stat-earned-pct').textContent    = fmtRevPct(totalEarned);
+
+  document.getElementById('stat-balance').textContent       = fmtRev(totalBalance);
+  document.getElementById('stat-balance-pct').textContent   = fmtRevPct(totalBalance);
 }
 
 
@@ -1227,18 +1400,28 @@ function renderRows() {
         <td class="px-6 py-4 text-right font-medium ${
           (event.totalCost - event.paid) > 0 ? 'text-red-600' : 'text-gray-900'
         }">$${(event.totalCost - event.paid).toFixed(2)}</td>
-        <td class="px-6 py-4 text-right space-x-2">
-          <button onclick="viewDetails('${event.id}')" class="text-indigo-600">ℹ️</button>
-          ${
-            isAdmin || isOwner
-              ? `
-                <button onclick="openEditor('${event.id}')" class="text-yellow-600">✏️</button>
-                <button onclick="deleteEvent('${event.id}')" class="text-red-600">🗑️</button>
-                <button onclick="downloadICS('${event.id}')" class="text-green-600" title="Add to Calendar">📅</button>
-              `
-              : ''
-          }
-        </td>
+   <td class="px-6 py-4 text-right space-x-2">
+  <!-- Info (grey outline) -->
+  <button onclick="viewDetails('${event.id}')" class="text-gray-300 hover:text-gray-500">
+    <span class="material-icons-outlined">info</span>
+  </button>
+  ${
+    (isAdmin || isOwner)
+      ? `
+        <!-- Edit (grey outline) -->
+        <button onclick="openEditor('${event.id}')" class="text-gray-300 hover:text-gray-500">
+          <span class="material-icons-outlined">edit</span>
+        </button>
+        <!-- Delete (red filled) -->
+        <button onclick="deleteEvent('${event.id}')" class="text-red-300 hover:text-red-700">
+          <span class="material-icons-outlined">delete</span>
+        </button>
+
+      `
+      : ``
+  }
+</td>
+
       </tr>
     `;
   }).join('');
@@ -1276,18 +1459,29 @@ function renderRows() {
         <div class="text-sm"><strong>Paid:</strong> $${parseFloat(event.paid || 0).toFixed(2)}</div>
         <div class="text-sm"><strong>Balance:</strong> $${(event.totalCost - event.paid).toFixed(2)}</div>
         <div class="text-sm"><strong>Created By:</strong> ${event.createdBy || 'user'}</div>
-        <div class="mt-3 flex flex-wrap gap-3 text-sm">
-          <button onclick="viewDetails('${event.id}')" class="text-indigo-600 hover:underline">ℹ️ Details</button>
-          ${
-            isAdmin || isOwner
-              ? `
-                <button onclick="openEditor('${event.id}')" class="text-yellow-600 hover:underline">✏️ Edit</button>
-                <button onclick="deleteEvent('${event.id}')" class="text-red-600 hover:underline">🗑️ Delete</button>
-                <button onclick="downloadICS('${event.id}')" class="text-green-600 hover:underline">📅</button>
-              `
-              : `<span class="text-gray-400 italic">Restricted</span>`
-          }
-        </div>
+      <div class="mt-3 flex flex-wrap gap-3 text-sm">
+  <!-- Info (grey outline) -->
+  <button onclick="viewDetails('${event.id}')" class="text-gray-500 hover:bg-gray-100 p-1 rounded">
+    <span class="material-icons-outlined align-middle">info</span> Details
+  </button>
+  ${
+    (isAdmin || isOwner)
+      ? `
+        <!-- Edit (grey outline) -->
+        <button onclick="openEditor('${event.id}')" class="text-gray-500 hover:bg-gray-100 p-1 rounded">
+          <span class="material-icons-outlined align-middle">edit</span> Edit
+        </button>
+        <!-- Delete (red filled) -->
+        <button onclick="deleteEvent('${event.id}')" class="text-red-600 hover:bg-red-100 p-1 rounded">
+          <span class="material-icons-outlined align-middle">delete</span> Delete
+        </button>
+       
+      `
+      : `<span class="text-gray-400 italic">Restricted</span>`
+  }
+</div>
+
+
       </div>
     `;
   }).join('');
@@ -1541,7 +1735,7 @@ document.getElementById('eventFilter').addEventListener('change', render);
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 <script>
-  emailjs.init("tMwPoa38QEavEGxTf");
+  emailjs.init("u0LCBcTzDS8Qkk8Uo");
   
 
 </script>
@@ -1560,7 +1754,7 @@ if (saved) {
 }
 
   // Initialize EmailJS
-  emailjs.init("tMwPoa38QEavEGxTf");
+  emailjs.init("u0LCBcTzDS8Qkk8Uo");
 
   // Toast Message
   function showToast(message, duration = 3000) {
